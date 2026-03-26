@@ -26,14 +26,6 @@ let users = [
     email: 'teste@gmail.com',
     senha: '123',
     role: 'user'
-  },
-  {
-    id_usuario: 3,
-    nome: 'Acesso Fixo',
-    usuario: 'acesso',
-    email: 'acesso@gmail.com',
-    senha: '123',
-    role: 'user'
   }
 ];
 let tasks = [];
@@ -159,10 +151,47 @@ app.get('/api/tarefas', (req, res) => {
   res.json(tasks);
 });
 
-app.listen(PORT, () => {
+const os = require('os');
+const fs = require('fs');
+
+function getLocalIp() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '10.0.2.2';
+}
+
+const localIp = getLocalIp();
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`==========================================`);
   console.log(`SERVIDOR RODANDO (MODO MOCK / SEM BANCO)`);
-  console.log(`IP LOCAL: http://172.28.54.191:${PORT}`);
+  console.log(`IP LOCAL: http://${localIp}:${PORT}`);
   console.log(`Acesse por: http://localhost:${PORT}`);
   console.log(`==========================================`);
+  
+  // Atualiza automaticamente o IP no app Flutter
+  try {
+    const configContent = `// ARQUIVO GERADO AUTOMATICAMENTE PELO BACKEND (app.js)
+// Nao edite manualmente. Este arquivo é atualizado ao rodar "node app.js".
+class ApiConfig {
+  static const String baseUrl = "http://${localIp}:${PORT}";
+}
+`;
+    // Assumindo que app.js fica ao lado de akilli_app
+    const configPath = path.join(__dirname, 'akilli_app', 'lib', 'config.dart');
+    if (fs.existsSync(path.join(__dirname, 'akilli_app', 'lib'))) {
+      fs.writeFileSync(configPath, configContent);
+      console.log(`[Config Flutter] IP '${localIp}' salvo em akilli_app/lib/config.dart`);
+    } else {
+      console.log(`[Config Flutter] A pasta akilli_app/lib não foi encontrada. Ignorando.`);
+    }
+  } catch (err) {
+    console.log(`[Config Flutter] Erro ao salvar config.dart:`, err.message);
+  }
 });
