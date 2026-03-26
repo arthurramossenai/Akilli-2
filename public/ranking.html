@@ -1,0 +1,141 @@
+ <!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Akilli – Ranking</title>
+  
+  <!-- Fontes (já incluídas no styles.css, mas mantendo para garantir) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Link para o CSS principal -->
+      <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="container nav-inner">
+      <div class="brand">
+        <a href="landingpage.html"><img src="img/akilli.svg" alt="Logo Akilli"></a>
+      </div>
+
+        <nav class="menu" aria-label="Navegação principal">
+        <a href="tarefas.html" class="menu-link">Tarefas</a>
+        <a href="foco.html" class="menu-link">Foco</a>
+        <a href="apps.html" class="menu-link">Distrações</a>
+        <a href="ranking.html" class="menu-link">Ranking</a>
+      </nav>
+
+        <button class="btn btn-outline">Entrar</button>
+        </div>
+    </header>
+
+  <!-- CONTEÚDO -->
+  <main class="content container">
+    
+    <!-- Layout Principal da Página de Ranking -->
+    <section class="ranking-layout">
+        
+        <!-- Coluna Esquerda: Título -->
+        <div class="ranking-header-text">
+            <h1>Ranking</h1>
+            <p>A consistência te leva ao topo. <strong>Veja seu progresso.</strong></p>
+        </div>
+
+        <!-- Coluna Direita: Card -->
+        <div class="ranking-card">
+            
+            <!-- Filtros -->
+            <div class="card-filtros">
+                <div class="filter-group">
+                    <span class="active-time">SEMANAL</span>
+                    <span class="separador">|</span>
+                    <span>MENSAL</span>
+                    <span class="separador">|</span>
+                    <span>GERAL</span>
+                </div>
+                <div class="filter-group">
+                    <span class="active-scope">Global</span>
+                    <span>Amigos</span>
+                </div>
+            </div>
+
+            <!-- Lista de Ranking -->
+            <div class="ranking-list">
+                
+                <!-- Cabeçalho da Lista -->
+                <div class="list-header">
+                    <span>Nome</span>
+                    <span>Horas de Foco</span>
+                    <span>Ranking</span>
+                </div>
+
+                <!-- Item 1 -->
+                <div class="list-item">
+                    <div class="user-info">
+                        <img src="https://placehold.co/40x40/E0E0E0/333?text=TB" alt="Avatar Thomas Brien" class="avatar">
+                        <span class="user-name">Thomas Brien</span>
+                    </div>
+                    <span class="user-hours">168 horas</span>
+                    <span class="user-rank">#1</span>
+                </div>
+                
+                <!-- Item 2 -->
+                <div class="list-item">
+                    <div class="user-info">
+                        <img src="https://placehold.co/40x40/C0C0C0/333?text=KK" alt="Avatar Kelly Key" class="avatar">
+                        <span class="user-name">Kelly Key</span>
+                    </div>
+                    <span class="user-hours">159 horas</span>
+                    <span class="user-rank">#2</span>
+                </div>
+
+                <!-- Item 3 -->
+                <div class="list-item">
+                    <div class="user-info">
+                        <img src="https://placehold.co/40x40/A0A0A0/333?text=CM" alt="Avatar Casimiro Miguel" class="avatar">
+                        <span class="user-name">Casimiro Miguel</span>
+                    </div>
+                    <span class="user-hours">142 horas</span>
+                    <span class="user-rank">#3</span>
+                </div>
+
+                <!-- Item 4 -->
+                <div class="list-item">
+                    <div class="user-info">
+                        <img src="https://placehold.co/40x40/808080/FFF?text=JB" alt="Avatar Justin Bieber" class="avatar">
+                        <span class="user-name">Justin Bieber</span>
+                    </div>
+                    <span class="user-hours">112 horas</span>
+                    <span class="user-rank">#4</span>
+                </div>
+
+                <!-- Item do Usuário (Destaque) -->
+                <div class="list-item user-highlight">
+                    <div class="user-info">
+                        <span class="badge">VOCÊ</span>
+                        <span class="dot"></span>
+                        <!-- Avatar de Texto 'S' -->
+                        <div class="avatar user-avatar" style="background-color: #E53935;">S</div>
+                        <span class="user-name">Seu Nome</span>
+                    </div>
+                    <span class="user-hours">4 horas</span>
+                    <span class="user-rank">#124</span>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER
+  <footer class="footer">
+    <div class="container">
+      <small>2025 Akilli © Todos os direitos reservados.</small>
+    </div>
+  </footer> -->
+</body>
+</html>
