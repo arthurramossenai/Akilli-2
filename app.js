@@ -26,6 +26,14 @@ let users = [
     email: 'teste@gmail.com',
     senha: '123',
     role: 'user'
+  },
+  {
+    id_usuario: 3,
+    nome: 'Acesso Fixo',
+    usuario: 'acesso',
+    email: 'acesso@gmail.com',
+    senha: '123',
+    role: 'user'
   }
 ];
 let tasks = [];
@@ -154,7 +162,7 @@ app.get('/api/tarefas', (req, res) => {
 app.listen(PORT, () => {
   console.log(`==========================================`);
   console.log(`SERVIDOR RODANDO (MODO MOCK / SEM BANCO)`);
-  console.log(`IP LOCAL: http://192.168.0.168:${PORT}`);
+  console.log(`IP LOCAL: http://172.28.54.191:${PORT}`);
   console.log(`Acesse por: http://localhost:${PORT}`);
   console.log(`==========================================`);
 });

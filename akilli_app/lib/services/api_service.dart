@@ -5,7 +5,7 @@ import '../models/tarefa.dart';
 
 class AkilliApiService {
   // Endereço do seu servidor Node. Para emuladores Android use 10.0.2.2.
-  final String baseUrl = "http://192.168.0.168:3000"; 
+  final String baseUrl = "http://172.28.54.191:3000"; 
 
   Future<Usuario?> login(String email, String senha) async {
     try {
