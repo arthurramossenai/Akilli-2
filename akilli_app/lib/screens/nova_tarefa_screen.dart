@@ -16,7 +16,7 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
   final _dataInicioController = TextEditingController();
   final _dataFimController = TextEditingController();
 
-  String _prioridadeSelecionada = 'Média';
+  String _prioridadeSelecionada = 'Tarefa Normal';
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
 
@@ -117,7 +117,7 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
                 labelText: 'Prioridade',
                 border: OutlineInputBorder(),
               ),
-              items: ['Alta', 'Média', 'Baixa']
+              items: ['Tarefa Normal', 'Modo foco']
                   .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                   .toList(),
               onChanged: (value) {

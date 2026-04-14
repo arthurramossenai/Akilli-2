@@ -33,24 +33,21 @@ class _TarefasScreenState extends State<TarefasScreen> {
   }
 
   Color _corPrioridade(String prioridade) {
-    switch (prioridade.toLowerCase()) {
-      case 'alta':
-        return Colors.red[400]!;
-      case 'média':
-        return Colors.orange[400]!;
-      case 'baixa':
-        return Colors.green[400]!;
-      default:
-        return Colors.grey[400]!;
+    if (prioridade == 'Modo foco') {
+      return Colors.red[400]!;
+    } else {
+      return Colors.blue[400]!;
     }
   }
 
   IconData _iconeAndamento(String andamento) {
-    switch (andamento.toLowerCase()) {
-      case 'concluída':
+    switch (andamento) {
+      case 'Concluída':
         return Icons.check_circle;
-      case 'em andamento':
+      case 'Em Andamento':
         return Icons.timelapse;
+      case 'Cancelada':
+        return Icons.cancel;
       default:
         return Icons.radio_button_unchecked;
     }
