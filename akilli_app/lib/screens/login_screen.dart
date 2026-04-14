@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/api_service.dart';
+import '../services/supabase_service.dart';
 import 'tarefas_screen.dart';
-import 'admin_screen.dart';
 import 'cadastro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,7 +14,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
-  final AkilliApiService _apiService = AkilliApiService();
+  final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
 
   Future<void> _fazerLogin() async {
@@ -23,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final usuario = await _apiService.login(
+    final usuario = await _supabaseService.login(
       _emailController.text,
       _senhaController.text,
     );
@@ -34,17 +33,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (usuario != null) {
       if (mounted) {
-        if (usuario.role == 'admin') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const AdminScreen()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const TarefasScreen()),
-          );
-        }
+        // Navega para a tela de tarefas (sem distinção admin por enquanto)
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const TarefasScreen()),
+        );
       }
     } else {
       if (mounted) {

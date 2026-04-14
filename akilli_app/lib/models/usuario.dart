@@ -1,24 +1,44 @@
 class Usuario {
-  final int? id;
+  final int? idUsuario;
   final String nome;
+  final String usuario;
   final String email;
-  final String role;
+  final String? telefone;
+  final String? planoAssinatura;
+  final int? pontos;
+  final String? cadastradoEm;
 
-  Usuario({this.id, required this.nome, required this.email, required this.role});
+  Usuario({
+    this.idUsuario,
+    required this.nome,
+    required this.usuario,
+    required this.email,
+    this.telefone,
+    this.planoAssinatura,
+    this.pontos,
+    this.cadastradoEm,
+  });
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
     return Usuario(
-      id: json['id'],
-      nome: json['nome'],
-      email: json['email'],
-      role: json['role'] ?? 'user',
+      idUsuario: json['id_usuario'],
+      nome: json['nome'] ?? '',
+      usuario: json['usuario'] ?? '',
+      email: json['email'] ?? '',
+      telefone: json['telefone'],
+      planoAssinatura: json['plano_assinatura'],
+      pontos: json['pontos'],
+      cadastradoEm: json['cadastrado_em']?.toString(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
+        if (idUsuario != null) 'id_usuario': idUsuario,
         'nome': nome,
+        'usuario': usuario,
         'email': email,
-        'role': role,
+        'telefone': telefone,
+        'plano_assinatura': planoAssinatura,
+        'pontos': pontos,
       };
 }

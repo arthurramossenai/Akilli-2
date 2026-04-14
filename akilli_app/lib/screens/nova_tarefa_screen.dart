@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/tarefa.dart';
-import '../services/api_service.dart';
+import '../services/supabase_service.dart';
 
 class NovaTarefaScreen extends StatefulWidget {
   const NovaTarefaScreen({Key? key}) : super(key: key);
@@ -13,12 +13,24 @@ class NovaTarefaScreen extends StatefulWidget {
 class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
   final _tituloController = TextEditingController();
   final _descricaoController = TextEditingController();
-  final _prioridadeController = TextEditingController(text: 'Média');
   final _dataInicioController = TextEditingController();
   final _dataFimController = TextEditingController();
-  
-  final AkilliApiService _apiService = AkilliApiService();
+
+  String _prioridadeSelecionada = 'Média';
+  final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
+
+  Future<void> _selecionarData(TextEditingController controller) async {
+    final data = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2030),
+    );
+    if (data != null) {
+      controller.text = '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
+    }
+  }
 
   Future<void> _salvarTarefa() async {
     if (_tituloController.text.isEmpty) {
@@ -35,13 +47,13 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
     Tarefa novaTarefa = Tarefa(
       titulo: _tituloController.text,
       descricao: _descricaoController.text,
-      prioridade: _prioridadeController.text,
+      prioridade: _prioridadeSelecionada,
       dataInicio: _dataInicioController.text,
       dataFim: _dataFimController.text,
       andamento: 'Pendente',
     );
 
-    bool sucesso = await _apiService.cadastrarTarefa(novaTarefa);
+    bool sucesso = await _supabaseService.cadastrarTarefa(novaTarefa);
 
     setState(() {
       _isLoading = false;
@@ -49,7 +61,7 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
 
     if (sucesso) {
       if (mounted) {
-        Navigator.pop(context); // Volta para a tela de tarefas
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Tarefa criada com sucesso!')),
         );
@@ -99,12 +111,20 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
               maxLines: 3,
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _prioridadeController,
+            DropdownButtonFormField<String>(
+              value: _prioridadeSelecionada,
               decoration: const InputDecoration(
-                labelText: 'Prioridade (Alta, Média, Baixa)',
+                labelText: 'Prioridade',
                 border: OutlineInputBorder(),
               ),
+              items: ['Alta', 'Média', 'Baixa']
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _prioridadeSelecionada = value!;
+                });
+              },
             ),
             const SizedBox(height: 16),
             Row(
@@ -112,9 +132,12 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
                 Expanded(
                   child: TextField(
                     controller: _dataInicioController,
+                    readOnly: true,
+                    onTap: () => _selecionarData(_dataInicioController),
                     decoration: const InputDecoration(
                       labelText: 'Data de Início',
                       border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
                     ),
                   ),
                 ),
@@ -122,9 +145,12 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
                 Expanded(
                   child: TextField(
                     controller: _dataFimController,
+                    readOnly: true,
+                    onTap: () => _selecionarData(_dataFimController),
                     decoration: const InputDecoration(
                       labelText: 'Data de Fim',
                       border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
                     ),
                   ),
                 ),
@@ -135,7 +161,7 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
               height: 50,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _salvarTarefa,
-                child: _isLoading 
+                child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text("Salvar Tarefa"),
               ),

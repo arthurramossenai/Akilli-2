@@ -44,3 +44,7 @@ app.*.map.json
 
 # Generated IP Config
 lib/config.dart
+
+
+# Machine-specific Android paths
+android/local.properties

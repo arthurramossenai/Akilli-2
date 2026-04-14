@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../services/supabase_service.dart';
 
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({Key? key}) : super(key: key);
@@ -15,7 +15,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
   final TextEditingController _senhaController = TextEditingController();
   final TextEditingController _telefoneController = TextEditingController();
 
-  final AkilliApiService _apiService = AkilliApiService();
+  final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
 
   Future<void> _fazerCadastro() async {
@@ -23,7 +23,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
       _isLoading = true;
     });
 
-    final success = await _apiService.cadastrarUsuario({
+    final success = await _supabaseService.cadastrarUsuario({
       'nome': _nomeController.text,
       'usuario': _usuarioController.text,
       'email': _emailController.text,
