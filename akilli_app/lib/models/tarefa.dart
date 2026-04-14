@@ -2,7 +2,7 @@ class Tarefa {
   final int? idTarefa;
   final int? idUsuario;
   final String titulo;
-  final String prioridade; // Tarefa Normal, Modo foco (prioridade_enum)
+  final String prioridade; // Alta, Média, Baixa (prioridade_enum)
   final String? dataInicio;
   final String? dataFim;
   final String descricao;
@@ -24,7 +24,7 @@ class Tarefa {
       idTarefa: json['id_tarefa'],
       idUsuario: json['id_usuario'],
       titulo: json['titulo'] ?? '',
-      prioridade: json['prioridade'] ?? 'Tarefa Normal',
+      prioridade: json['prioridade'] ?? 'Média',
       dataInicio: json['data_inicio']?.toString(),
       dataFim: json['data_fim']?.toString(),
       descricao: json['descricao'] ?? '',

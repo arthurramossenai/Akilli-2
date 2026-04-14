@@ -33,10 +33,15 @@ class _TarefasScreenState extends State<TarefasScreen> {
   }
 
   Color _corPrioridade(String prioridade) {
-    if (prioridade == 'Modo foco') {
-      return Colors.red[400]!;
-    } else {
-      return Colors.blue[400]!;
+    switch (prioridade.toLowerCase()) {
+      case 'alta':
+        return Colors.red[400]!;
+      case 'média':
+        return Colors.orange[400]!;
+      case 'baixa':
+        return Colors.green[400]!;
+      default:
+        return Colors.grey[400]!;
     }
   }
 
