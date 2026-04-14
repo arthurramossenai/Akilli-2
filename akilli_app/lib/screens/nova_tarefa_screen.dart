@@ -28,7 +28,7 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
       lastDate: DateTime(2030),
     );
     if (data != null) {
-      controller.text = '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
+      controller.text = '${data.year}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
     }
   }
 
