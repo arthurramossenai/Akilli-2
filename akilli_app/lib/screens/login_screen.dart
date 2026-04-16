@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/supabase_service.dart';
-import 'tarefas_screen.dart';
+import 'main_tabs_screen.dart';
 import 'cadastro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Navega para a tela de tarefas (sem distinção admin por enquanto)
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const TarefasScreen()),
+          MaterialPageRoute(builder: (context) => const MainTabsScreen()),
         );
       }
     } else {

@@ -7,6 +7,8 @@ class Tarefa {
   final String? dataFim;
   final String descricao;
   final String andamento; // Pendente, Em Andamento, Concluída, Cancelada (andamento_enum)
+  final String? appProdutividade; // Package_name do app de foco ligado à tarefa (Opcional)
+  final bool modoFoco; // Indica se a tarefa usará bloqueio de foco
 
   Tarefa({
     this.idTarefa,
@@ -17,6 +19,8 @@ class Tarefa {
     this.dataFim,
     required this.descricao,
     required this.andamento,
+    this.appProdutividade,
+    this.modoFoco = false,
   });
 
   factory Tarefa.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,8 @@ class Tarefa {
       dataFim: json['data_fim']?.toString(),
       descricao: json['descricao'] ?? '',
       andamento: json['andamento'] ?? 'Pendente',
+      appProdutividade: json['app_produtividade'],
+      modoFoco: json['modo_foco'] ?? false,
     );
   }
 
@@ -41,5 +47,7 @@ class Tarefa {
         'data_fim': dataFim,
         'descricao': descricao,
         'andamento': andamento,
+        'app_produtividade': appProdutividade,
+        'modo_foco': modoFoco,
       };
 }

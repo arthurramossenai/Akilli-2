@@ -17,6 +17,9 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
   final _dataFimController = TextEditingController();
 
   String _prioridadeSelecionada = 'Média';
+  bool _modoFoco = false;
+  String? _appProdutividade;
+  
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
 
@@ -51,6 +54,8 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
       dataInicio: _dataInicioController.text,
       dataFim: _dataFimController.text,
       andamento: 'Pendente',
+      modoFoco: _modoFoco,
+      appProdutividade: _appProdutividade,
     );
 
     bool sucesso = await _supabaseService.cadastrarTarefa(novaTarefa);
@@ -123,6 +128,35 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
               onChanged: (value) {
                 setState(() {
                   _prioridadeSelecionada = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Modo Foco'),
+              subtitle: const Text('Ativar bloqueio de alertas durante esta tarefa'),
+              value: _modoFoco,
+              onChanged: (bool value) {
+                setState(() {
+                  _modoFoco = value;
+                });
+              },
+              activeColor: Colors.green,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _appProdutividade,
+              decoration: const InputDecoration(
+                labelText: 'App Produtivo (Opcional)',
+                border: OutlineInputBorder(),
+                helperText: 'Onde você executará esta tarefa?',
+              ),
+              items: ['Nenhum', 'Notion', 'VS Code', 'Figma', 'Word', 'Duolingo']
+                  .map((p) => DropdownMenuItem(value: p == 'Nenhum' ? null : p, child: Text(p)))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _appProdutividade = value;
                 });
               },
             ),

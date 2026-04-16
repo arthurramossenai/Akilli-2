@@ -6,7 +6,8 @@ import 'nova_tarefa_screen.dart';
 import 'login_screen.dart';
 
 class TarefasScreen extends StatefulWidget {
-  const TarefasScreen({Key? key}) : super(key: key);
+  final bool isTab;
+  const TarefasScreen({Key? key, this.isTab = false}) : super(key: key);
 
   @override
   State<TarefasScreen> createState() => _TarefasScreenState();
@@ -61,9 +62,9 @@ class _TarefasScreenState extends State<TarefasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: widget.isTab ? null : AppBar(
         title: Text(
-          "Akili",
+          "Akilli",
           style: GoogleFonts.raleway(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.primary,
