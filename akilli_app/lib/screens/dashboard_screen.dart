@@ -1,8 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/device_service.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  int _tiktokUsage = 0;
+  int _instagramUsage = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarDadosReais();
+  }
+
+  Future<void> _carregarDadosReais() async {
+    // Busca dados reais de pacotes comuns de distração
+    int tiktok = await DeviceService.getDailyUsageMinutes('com.zhiliaoapp.musically');
+    int instagram = await DeviceService.getDailyUsageMinutes('com.instagram.android');
+    
+    if (mounted) {
+      setState(() {
+        _tiktokUsage = tiktok;
+        _instagramUsage = instagram;
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatarMinutos(int minutos) {
+    if (minutos < 60) {
+      return '${minutos}m';
+    }
+    int h = minutos ~/ 60;
+    int m = minutos % 60;
+    return '${h}h ${m}m';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +60,7 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            "Veja quanto tempo você economizou fora de distrações e o tempo total investido nas suas tarefas focadas.",
+            "Veja o tempo detectado pelo Android. Estes tempos refletem o uso real de hoje direto das configurações do aparelho.",
             style: GoogleFonts.raleway(
               fontSize: 16,
               color: Colors.grey[700],
@@ -53,7 +92,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "2h 15m", // Mock
+                  "2h 15m", // Ainda mock (será calculado com lógica do app no futuro)
                   style: GoogleFonts.raleway(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -61,32 +100,7 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // Seção Apps de Produtividade
-          Text(
-            "Apps Produtivos",
-            style: GoogleFonts.raleway(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildAppUsageRow(
-            icon: Icons.code,
-            appName: 'VS Code',
-            time: '1h 45m',
-            color: Colors.blue,
-          ),
-          _buildAppUsageRow(
-            icon: Icons.book,
-            appName: 'Notion',
-            time: '30m',
-            color: Colors.black87,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Seção Apps de Distração
+          // Seção Apps de Distração (DADOS REAIS NATIVOS)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -98,26 +112,26 @@ class DashboardScreen extends StatelessWidget {
                   color: Colors.black87,
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  // TODO: Abrir tela de gerenciamento de distrações
-                },
-                child: const Text('Editar Lista'),
-              )
+              _isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : TextButton(
+                      onPressed: _carregarDadosReais,
+                      child: const Text('Atualizar'),
+                    )
             ],
           ),
           const SizedBox(height: 8),
           _buildAppUsageRow(
             icon: Icons.camera_alt,
             appName: 'Instagram',
-            time: '12m',
+            time: _formatarMinutos(_instagramUsage),
             color: Colors.pink,
             isDistraction: true,
           ),
           _buildAppUsageRow(
             icon: Icons.video_library,
             appName: 'TikTok',
-            time: '4m',
+            time: _formatarMinutos(_tiktokUsage),
             color: Colors.black,
             isDistraction: true,
           ),

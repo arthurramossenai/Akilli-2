@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'tarefas_screen.dart';
 import 'dashboard_screen.dart';
 import '../services/supabase_service.dart';
+import '../services/device_service.dart';
 import 'login_screen.dart';
 
 class MainTabsScreen extends StatefulWidget {
@@ -16,6 +17,17 @@ class MainTabsScreen extends StatefulWidget {
 class _MainTabsScreenState extends State<MainTabsScreen> {
   int _currentIndex = 0;
   final SupabaseService _supabaseService = SupabaseService();
+
+  @override
+  void initState() {
+    super.initState();
+    _pedirPermissoes();
+  }
+
+  Future<void> _pedirPermissoes() async {
+    // Ao abrir o app logado, já pede a permissão do UsageStats
+    await DeviceService.checkAndRequestUsagePermission();
+  }
 
   // Vamos substituir os "Containers" vazios pelas telas reais assim que criá-las
   final List<Widget> _screens = [
