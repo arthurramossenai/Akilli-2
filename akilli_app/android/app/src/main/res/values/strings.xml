@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">O Akilli usa este serviço para detectar quando você abre um app de distração durante o Modo Foco, e te ajudar a manter o foco na sua tarefa.</string>
+</resources>
