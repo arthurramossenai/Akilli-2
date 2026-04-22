@@ -244,24 +244,92 @@ class _FocoScreenState extends State<FocoScreen> {
               spacing: 12,
               runSpacing: 12,
               alignment: WrapAlignment.center,
-              children: _opcoesMinutos.map((minutos) {
-                bool selecionado = _minutosEscolhidos == minutos;
-                return ChoiceChip(
-                  label: Text('${minutos}m'),
-                  selected: selecionado,
-                  selectedColor: Colors.green[600],
+              children: [
+                ..._opcoesMinutos.map((minutos) {
+                  bool selecionado = _minutosEscolhidos == minutos;
+                  return ChoiceChip(
+                    label: Text('${minutos}m'),
+                    selected: selecionado,
+                    selectedColor: Colors.green[600],
+                    labelStyle: TextStyle(
+                      color: selecionado ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    onSelected: (selected) {
+                      setState(() {
+                        _minutosEscolhidos = minutos;
+                        _segundosRestantes = minutos * 60;
+                      });
+                    },
+                  );
+                }),
+                // Chip Personalizado
+                ActionChip(
+                  avatar: Icon(
+                    Icons.edit,
+                    size: 18,
+                    color: !_opcoesMinutos.contains(_minutosEscolhidos)
+                        ? Colors.white
+                        : Colors.green[700],
+                  ),
+                  label: Text(
+                    !_opcoesMinutos.contains(_minutosEscolhidos)
+                        ? '${_minutosEscolhidos}m'
+                        : 'Personalizado',
+                  ),
+                  backgroundColor: !_opcoesMinutos.contains(_minutosEscolhidos)
+                      ? Colors.green[600]
+                      : null,
                   labelStyle: TextStyle(
-                    color: selecionado ? Colors.white : Colors.black87,
+                    color: !_opcoesMinutos.contains(_minutosEscolhidos)
+                        ? Colors.white
+                        : Colors.black87,
                     fontWeight: FontWeight.bold,
                   ),
-                  onSelected: (selected) {
-                    setState(() {
-                      _minutosEscolhidos = minutos;
-                      _segundosRestantes = minutos * 60;
-                    });
+                  onPressed: () async {
+                    final controller = TextEditingController();
+                    final resultado = await showDialog<int>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Text('Tempo Personalizado'),
+                        content: TextField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          autofocus: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Minutos',
+                            hintText: 'Ex: 35',
+                            border: OutlineInputBorder(),
+                            suffixText: 'min',
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancelar'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              int? val = int.tryParse(controller.text);
+                              if (val != null && val > 0 && val <= 480) {
+                                Navigator.pop(context, val);
+                              }
+                            },
+                            child: const Text('Confirmar'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (resultado != null) {
+                      setState(() {
+                        _minutosEscolhidos = resultado;
+                        _segundosRestantes = resultado * 60;
+                      });
+                    }
                   },
-                );
-              }).toList(),
+                ),
+              ],
             ),
             const SizedBox(height: 32),
           ],
