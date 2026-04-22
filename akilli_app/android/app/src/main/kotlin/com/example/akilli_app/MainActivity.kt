@@ -24,7 +24,6 @@ class MainActivity : FlutterActivity() {
                     AppBlockerService.blockedPackages.addAll(packages)
                     AppBlockerService.taskName = taskName
                     AppBlockerService.isEnabled = packages.isNotEmpty()
-                    AppBlockerService.snoozedUntil.clear()
                     result.success(true)
                 }
                 "clearBlockedApps" -> {

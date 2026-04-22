@@ -104,15 +104,22 @@ class _MainTabsScreenState extends State<MainTabsScreen> {
   }
 
   Future<void> _sincronizarBloqueio() async {
+    // Se o modo foco manual estiver rodando, não interfere
+    if (AppBlockerChannel.isManualFocusActive) return;
+
     try {
       final tarefas = await _supabaseService.getTarefas();
       Tarefa? tarefaAtiva;
       
       for (var t in tarefas) {
         if (_isFocoAtivo(t)) {
+          // Atualiza o status automaticamente para Em Andamento
+          if (t.andamento == 'Pendente' && t.idTarefa != null) {
+            await _supabaseService.atualizarAndamento(t.idTarefa!, 'Em Andamento');
+          }
           if (t.appsBloqueados != null && t.appsBloqueados!.isNotEmpty) {
             tarefaAtiva = t;
-            break;
+            break; // Bloqueia com base na primeira ativa encontrada
           }
         }
       }

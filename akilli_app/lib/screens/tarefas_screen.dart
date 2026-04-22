@@ -27,47 +27,21 @@ class _TarefasScreenState extends State<TarefasScreen> {
 
   Future<void> _carregarTarefas() async {
     setState(() => _isLoading = true);
-    final tarefas = await _supabaseService.getTarefas();
-    setState(() {
-      _tarefas = tarefas;
-      _isLoading = false;
-    });
-  }
-
-  Color _corPrioridade(String prioridade) {
-    switch (prioridade.toLowerCase()) {
-      case 'alta':
-        return Colors.red[400]!;
-      case 'média':
-        return Colors.orange[400]!;
-      case 'baixa':
-        return Colors.green[400]!;
-      default:
-        return Colors.grey[400]!;
+    final tarefasData = await _supabaseService.getTarefas();
+    if (mounted) {
+      setState(() {
+        _tarefas = tarefasData;
+        _isLoading = false;
+      });
     }
   }
 
-  IconData _iconeAndamento(String andamento) {
-    switch (andamento) {
-      case 'Concluída':
-        return Icons.check_circle;
-      case 'Em Andamento':
-        return Icons.timelapse;
-      case 'Cancelada':
-        return Icons.cancel;
-      default:
-        return Icons.radio_button_unchecked;
-    }
-  }
-
-  /// Verifica se a tarefa com modo foco está ativa no momento atual
   bool _isFocoAtivo(Tarefa tarefa) {
     if (!tarefa.modoFoco) return false;
     if (tarefa.andamento == 'Concluída' || tarefa.andamento == 'Cancelada') return false;
     
     DateTime agora = DateTime.now();
     
-    // Parse data_inicio (formato: "2025-04-22" ou "2025-04-22 14:30")
     DateTime? inicio;
     DateTime? fim;
     
@@ -116,264 +90,263 @@ class _TarefasScreenState extends State<TarefasScreen> {
     return false;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: widget.isTab ? null : AppBar(
-        title: Text(
-          "Akilli",
+  IconData _iconeAndamento(String status) {
+    switch (status) {
+      case 'Concluída': return Icons.check_circle;
+      case 'Em Andamento': return Icons.play_circle_fill;
+      default: return Icons.circle_outlined;
+    }
+  }
+
+  Color _corPrioridade(String prioridade) {
+    switch (prioridade) {
+      case 'Alta': return Colors.red;
+      case 'Média': return Colors.orange;
+      case 'Baixa': return Colors.green;
+      default: return Colors.blue;
+    }
+  }
+
+  Widget _buildList(List<Tarefa> lista) {
+    if (lista.isEmpty) {
+      return Center(
+        child: Text(
+          "Nenhuma Tarefa",
           style: GoogleFonts.raleway(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
+            color: Colors.grey[500],
+            fontWeight: FontWeight.w500,
           ),
         ),
-        automaticallyImplyLeading: false,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: OutlinedButton(
-              onPressed: () {
-                _supabaseService.logout();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
+      );
+    }
+    
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 8, bottom: 80),
+      itemCount: lista.length,
+      itemBuilder: (context, index) {
+        final tarefa = lista[index];
+        final bool focoAtivo = _isFocoAtivo(tarefa);
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: focoAtivo ? 4 : 2,
+          color: focoAtivo ? Colors.green[50] : null,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: focoAtivo
+                ? BorderSide(color: Colors.green[400]!, width: 2)
+                : BorderSide.none,
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: focoAtivo
+                ? const Icon(Icons.local_fire_department, color: Colors.green, size: 28)
+                : Icon(
+                    _iconeAndamento(tarefa.andamento),
+                    color: _corPrioridade(tarefa.prioridade),
+                    size: 28,
+                  ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    tarefa.titulo,
+                    style: GoogleFonts.raleway(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (focoAtivo)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green[600],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      '🔥 EM FOCO',
+                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${tarefa.prioridade} • ${tarefa.andamento}',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                if (tarefa.descricao.isNotEmpty)
+                  Text(
+                    tarefa.descricao,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+              ],
+            ),
+            trailing: PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (tarefa.idTarefa == null) return;
+                if (value == 'deletar') {
+                  await AppBlockerChannel.clearBlockedApps();
+                  await _supabaseService.deletarTarefa(tarefa.idTarefa!);
+                  _carregarTarefas();
+                } else if (value == 'editar') {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NovaTarefaScreen(tarefaExistente: tarefa),
+                    ),
+                  );
+                  _carregarTarefas();
+                } else {
+                  if (value == 'Concluída' && tarefa.andamento != 'Concluída') {
+                    await AppBlockerChannel.clearBlockedApps();
+                    int minutosTracker = 0;
+                    try {
+                      if (tarefa.dataInicio != null) {
+                        DateTime parseDate(String dt) {
+                          final partes = dt.split(' ');
+                          final d = partes[0].split('-');
+                          int h = 0, m = 0;
+                          if (partes.length > 1) {
+                            final t = partes[1].split(':');
+                            h = int.parse(t[0]); m = int.parse(t[1]);
+                          }
+                          return DateTime(int.parse(d[0]), int.parse(d[1]), int.parse(d[2]), h, m);
+                        }
+                        final ini = parseDate(tarefa.dataInicio!);
+                        final agora = DateTime.now();
+                        DateTime fimConsiderado = agora;
+                        if (tarefa.dataFim != null && tarefa.dataFim!.isNotEmpty) {
+                          final fimReal = parseDate(tarefa.dataFim!);
+                          if (agora.isAfter(fimReal)) {
+                            fimConsiderado = fimReal;
+                          }
+                        }
+                        minutosTracker = fimConsiderado.difference(ini).inMinutes;
+                      }
+                    } catch (_) {}
+                    
+                    if (minutosTracker <= 0) minutosTracker = 1;
+                    
+                    int ptsExtra = (minutosTracker * 2.4).round();
+                    await _supabaseService.adicionarPontos(ptsExtra);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tarefa concluída! +$ptsExtra pontos 🎉')));
+                    }
+                  }
+
+                  await _supabaseService.atualizarAndamento(tarefa.idTarefa!, value);
+                  _carregarTarefas();
+                }
               },
-              child: const Text("Sair"),
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'editar', child: Text('✏️ Editar')),
+                const PopupMenuDivider(),
+                const PopupMenuItem(value: 'Pendente', child: Text('Marcar como Pendente')),
+                const PopupMenuItem(value: 'Em Andamento', child: Text('Marcar como Em Andamento')),
+                const PopupMenuItem(value: 'Concluída', child: Text('Marcar como Concluída')),
+                const PopupMenuDivider(),
+                const PopupMenuItem(value: 'deletar', child: Text('Deletar', style: TextStyle(color: Colors.red))),
+              ],
             ),
           ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _carregarTarefas,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Tarefas",
-                      style: GoogleFonts.raleway(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Defina suas metas e tarefas importantes. O app usa essas informações para lembrar você do que realmente importa quando surgir uma distração.",
-                      style: GoogleFonts.raleway(
-                        fontSize: 16,
-                        color: Colors.grey[700],
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const NovaTarefaScreen()),
-                        );
-                        _carregarTarefas();
-                      },
-                      child: const Text("Nova Tarefa"),
-                    ),
-                    const SizedBox(height: 24),
+        );
+      },
+    );
+  }
 
-                    if (_tarefas.isEmpty)
-                      Container(
-                        width: double.infinity,
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Center(
-                          child: Text(
-                            "Nenhuma Tarefa Registrada",
-                            style: GoogleFonts.raleway(
-                              color: Colors.grey[500],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _tarefas.length,
-                        itemBuilder: (context, index) {
-                          final tarefa = _tarefas[index];
-                          final bool focoAtivo = _isFocoAtivo(tarefa);
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            elevation: focoAtivo ? 4 : 2,
-                            color: focoAtivo ? Colors.green[50] : null,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: focoAtivo
-                                  ? BorderSide(color: Colors.green[400]!, width: 2)
-                                  : BorderSide.none,
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              leading: focoAtivo
-                                  ? const Icon(Icons.local_fire_department, color: Colors.green, size: 28)
-                                  : Icon(
-                                      _iconeAndamento(tarefa.andamento),
-                                      color: _corPrioridade(tarefa.prioridade),
-                                      size: 28,
-                                    ),
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      tarefa.titulo,
-                                      style: GoogleFonts.raleway(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  if (focoAtivo)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[600],
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Text(
-                                        '🔥 EM FOCO',
-                                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${tarefa.prioridade} • ${tarefa.andamento}',
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                  if (tarefa.descricao.isNotEmpty)
-                                    Text(
-                                      tarefa.descricao,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: Colors.grey[500],
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (value) async {
-                                  if (tarefa.idTarefa == null) return;
-                                  if (value == 'deletar') {
-                                    await AppBlockerChannel.clearBlockedApps();
-                                    await _supabaseService.deletarTarefa(tarefa.idTarefa!);
-                                    _carregarTarefas();
-                                  } else if (value == 'editar') {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => NovaTarefaScreen(tarefaExistente: tarefa),
-                                      ),
-                                    );
-                                    _carregarTarefas();
-                                  } else {
-                                    // Se estiver marcando como concluída
-                                    if (value == 'Concluída' && tarefa.andamento != 'Concluída') {
-                                      await AppBlockerChannel.clearBlockedApps();
-                                      int minutosTracker = 0;
-                                      try {
-                                        if (tarefa.dataInicio != null) {
-                                          DateTime parseDate(String dt) {
-                                            final partes = dt.split(' ');
-                                            final d = partes[0].split('-');
-                                            int h = 0, m = 0;
-                                            if (partes.length > 1) {
-                                              final t = partes[1].split(':');
-                                              h = int.parse(t[0]); m = int.parse(t[1]);
-                                            }
-                                            return DateTime(int.parse(d[0]), int.parse(d[1]), int.parse(d[2]), h, m);
-                                          }
-                                          final ini = parseDate(tarefa.dataInicio!);
-                                          final agora = DateTime.now();
-                                          DateTime fimConsiderado = agora;
-                                          if (tarefa.dataFim != null && tarefa.dataFim!.isNotEmpty) {
-                                            final fimReal = parseDate(tarefa.dataFim!);
-                                            if (agora.isAfter(fimReal)) {
-                                              fimConsiderado = fimReal;
-                                            }
-                                          }
-                                          minutosTracker = fimConsiderado.difference(ini).inMinutes;
-                                        }
-                                      } catch (_) {}
-                                      
-                                      // 2 pontos/minuto + 20% bônus = 2.4
-                                      if (minutosTracker <= 0) minutosTracker = 1;
-                                      
-                                      int ptsExtra = (minutosTracker * 2.4).round();
-                                      await _supabaseService.adicionarPontos(ptsExtra);
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tarefa concluída! +$ptsExtra pontos 🎉')));
-                                      }
-                                    }
+  @override
+  Widget build(BuildContext context) {
+    final pendentes = _tarefas.where((t) => t.andamento == 'Pendente').toList();
+    final emAndamento = _tarefas.where((t) => t.andamento == 'Em Andamento').toList();
+    final concluidas = _tarefas.where((t) => t.andamento == 'Concluída').toList();
 
-                                    await _supabaseService.atualizarAndamento(
-                                      tarefa.idTarefa!,
-                                      value,
-                                    );
-                                    _carregarTarefas();
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'editar',
-                                    child: Text('✏️ Editar'),
-                                  ),
-                                  const PopupMenuDivider(),
-                                  const PopupMenuItem(
-                                    value: 'Pendente',
-                                    child: Text('Marcar como Pendente'),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'Em Andamento',
-                                    child: Text('Marcar como Em Andamento'),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'Concluída',
-                                    child: Text('Marcar como Concluída'),
-                                  ),
-                                  const PopupMenuDivider(),
-                                  const PopupMenuItem(
-                                    value: 'deletar',
-                                    child: Text(
-                                      'Deletar',
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                  ],
-                ),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: widget.isTab ? null : AppBar(
+          title: Text(
+            "Akilli",
+            style: GoogleFonts.raleway(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+          ),
+          automaticallyImplyLeading: false,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: OutlinedButton(
+                onPressed: () {
+                  _supabaseService.logout();
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+                },
+                child: const Text("Sair"),
               ),
             ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Tarefas",
+                              style: GoogleFonts.raleway(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const NovaTarefaScreen()),
+                                );
+                                _carregarTarefas();
+                              },
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text("Nova"),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "Defina suas metas e gerencie o andamento.",
+                          style: GoogleFonts.raleway(fontSize: 16, color: Colors.grey[700], height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const TabBar(
+                    labelColor: Colors.green,
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: Colors.green,
+                    tabs: [
+                      Tab(text: "Pendente"),
+                      Tab(text: "Em Andamento"),
+                      Tab(text: "Concluídas"),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        RefreshIndicator(onRefresh: _carregarTarefas, child: _buildList(pendentes)),
+                        RefreshIndicator(onRefresh: _carregarTarefas, child: _buildList(emAndamento)),
+                        RefreshIndicator(onRefresh: _carregarTarefas, child: _buildList(concluidas)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }

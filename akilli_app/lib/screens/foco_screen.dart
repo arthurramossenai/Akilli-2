@@ -193,6 +193,7 @@ class _FocoScreenState extends State<FocoScreen> {
   void _iniciarTimer() async {
     // Inicia o bloqueio real dos apps
     if (_appsBloqueados.isNotEmpty) {
+      AppBlockerChannel.isManualFocusActive = true;
       await AppBlockerChannel.setBlockedApps(_appsBloqueados.keys.toList(), "Modo Foco Manual");
     }
 
@@ -246,6 +247,7 @@ class _FocoScreenState extends State<FocoScreen> {
 
   Future<void> _finalizarSessao({required bool sucesso}) async {
     // Desliga o bloqueio nativo ao encerrar
+    AppBlockerChannel.isManualFocusActive = false;
     await AppBlockerChannel.clearBlockedApps();
 
     DateTime fimSessao = DateTime.now();

@@ -2,6 +2,9 @@ import 'package:flutter/services.dart';
 
 class AppBlockerChannel {
   static const _channel = MethodChannel('com.akilli/app_blocker');
+  
+  // Flag para impedir que a sincronização periódica zere o bloqueio manual
+  static bool isManualFocusActive = false;
 
   /// Envia a lista de apps bloqueados para o serviço nativo Android
   static Future<bool> setBlockedApps(List<String> packageNames, String taskName) async {
