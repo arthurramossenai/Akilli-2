@@ -77,10 +77,39 @@ class SupabaseService {
         'data_fim': tarefa.dataFim,
         'descricao': tarefa.descricao,
         'andamento': tarefa.andamento,
+        'modo_foco': tarefa.modoFoco,
+        'app_produtividade': tarefa.appProdutividade,
+        if (tarefa.appsBloqueados != null) 'apps_bloqueados': tarefa.appsBloqueados,
       });
       return true;
     } catch (e) {
       print('Erro ao cadastrar tarefa: $e');
+      return false;
+    }
+  }
+
+  /// Atualiza todos os campos de uma tarefa existente
+  Future<bool> atualizarTarefa(Tarefa tarefa) async {
+    try {
+      if (tarefa.idTarefa == null) return false;
+
+      await _client
+          .from('tarefas')
+          .update({
+            'titulo': tarefa.titulo,
+            'prioridade': tarefa.prioridade,
+            'data_inicio': tarefa.dataInicio,
+            'data_fim': tarefa.dataFim,
+            'descricao': tarefa.descricao,
+            'andamento': tarefa.andamento,
+            'modo_foco': tarefa.modoFoco,
+            'app_produtividade': tarefa.appProdutividade,
+            'apps_bloqueados': tarefa.appsBloqueados,
+          })
+          .eq('id_tarefa', tarefa.idTarefa!);
+      return true;
+    } catch (e) {
+      print('Erro ao atualizar tarefa: $e');
       return false;
     }
   }

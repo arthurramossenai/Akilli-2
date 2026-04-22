@@ -200,6 +200,14 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                   if (value == 'deletar') {
                                     await _supabaseService.deletarTarefa(tarefa.idTarefa!);
                                     _carregarTarefas();
+                                  } else if (value == 'editar') {
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => NovaTarefaScreen(tarefaExistente: tarefa),
+                                      ),
+                                    );
+                                    _carregarTarefas();
                                   } else {
                                     await _supabaseService.atualizarAndamento(
                                       tarefa.idTarefa!,
@@ -209,6 +217,11 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                   }
                                 },
                                 itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'editar',
+                                    child: Text('✏️ Editar'),
+                                  ),
+                                  const PopupMenuDivider(),
                                   const PopupMenuItem(
                                     value: 'Pendente',
                                     child: Text('Marcar como Pendente'),

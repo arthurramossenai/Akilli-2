@@ -9,6 +9,7 @@ class Tarefa {
   final String andamento; // Pendente, Em Andamento, Concluída, Cancelada (andamento_enum)
   final String? appProdutividade; // Package_name do app de foco ligado à tarefa (Opcional)
   final bool modoFoco; // Indica se a tarefa usará bloqueio de foco
+  final String? appsBloqueados; // JSON com lista de package_names bloqueados
 
   Tarefa({
     this.idTarefa,
@@ -21,6 +22,7 @@ class Tarefa {
     required this.andamento,
     this.appProdutividade,
     this.modoFoco = false,
+    this.appsBloqueados,
   });
 
   factory Tarefa.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class Tarefa {
       andamento: json['andamento'] ?? 'Pendente',
       appProdutividade: json['app_produtividade'],
       modoFoco: json['modo_foco'] ?? false,
+      appsBloqueados: json['apps_bloqueados'],
     );
   }
 
@@ -49,5 +52,6 @@ class Tarefa {
         'andamento': andamento,
         'app_produtividade': appProdutividade,
         'modo_foco': modoFoco,
+        if (appsBloqueados != null) 'apps_bloqueados': appsBloqueados,
       };
 }
