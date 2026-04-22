@@ -34,6 +34,7 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
   bool _isEditMode = false;
+  String? _tituloError;
 
   // Package names de apps populares de distração
   static const List<String> _appsPopularesPkg = [
@@ -89,6 +90,11 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
           }
         } catch (_) {}
       }
+    } else {
+      // Valor padrão para data/hora inicial de nova tarefa
+      final agora = DateTime.now();
+      _dataInicioController.text = '${agora.year}-${agora.month.toString().padLeft(2, '0')}-${agora.day.toString().padLeft(2, '0')}';
+      _horaInicioController.text = '${agora.hour.toString().padLeft(2, '0')}:${agora.minute.toString().padLeft(2, '0')}';
     }
   }
 
@@ -256,9 +262,16 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
   }
 
   Future<void> _salvarTarefa() async {
-    if (_tituloController.text.isEmpty) {
+    setState(() {
+      _tituloError = null;
+    });
+
+    if (_tituloController.text.trim().isEmpty) {
+      setState(() {
+        _tituloError = 'O título é obrigatório para salvar a tarefa.';
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('O título é obrigatório.')),
+        const SnackBar(content: Text('Por favor, preencha o título da tarefa.')),
       );
       return;
     }
@@ -331,10 +344,14 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
             const SizedBox(height: 24),
             TextField(
               controller: _tituloController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Título',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                errorText: _tituloError,
               ),
+              onChanged: (_) {
+                if (_tituloError != null) setState(() => _tituloError = null);
+              },
             ),
             const SizedBox(height: 16),
             TextField(

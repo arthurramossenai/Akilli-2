@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:installed_apps/app_info.dart';
 import '../models/sessao_foco.dart';
 import '../services/supabase_service.dart';
+import '../services/device_service.dart';
+import '../services/app_blocker_channel.dart';
 
 class FocoScreen extends StatefulWidget {
   const FocoScreen({Key? key}) : super(key: key);
@@ -25,13 +30,172 @@ class _FocoScreenState extends State<FocoScreen> {
   // Opções pré-definidas de tempo
   final List<int> _opcoesMinutos = [10, 15, 20, 25, 30, 45, 60, 90];
 
+  // Apps de Distração para bloqueio (Global Foco)
+  Map<String, String> _appsBloqueados = {};
+
+  static const List<String> _appsPopularesPkg = [
+    'com.instagram.android',
+    'com.zhiliaoapp.musically',
+    'com.twitter.android',
+    'com.facebook.katana',
+    'com.snapchat.android',
+    'com.whatsapp',
+    'com.google.android.youtube',
+    'com.reddit.frontpage',
+    'com.discord',
+    'com.spotify.music',
+    'com.netflix.mediaclient',
+    'tv.twitch.android.app',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarAppsGlobais();
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
     super.dispose();
   }
 
-  void _iniciarTimer() {
+  Future<void> _carregarAppsGlobais() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonApps = prefs.getString('foco_global_apps');
+    if (jsonApps != null) {
+      try {
+        final decoded = jsonDecode(jsonApps) as Map;
+        setState(() {
+          _appsBloqueados = Map<String, String>.from(decoded);
+        });
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _salvarAppsGlobais(Map<String, String> apps) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('foco_global_apps', jsonEncode(apps));
+  }
+
+  Future<void> _abrirSeletorApps() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    List<AppInfo> appsInstalados = [];
+    try {
+      appsInstalados = await DeviceService.getInstalledApps();
+    } catch (e) {
+      print('Erro ao carregar apps: $e');
+    }
+
+    if (mounted) Navigator.pop(context); // Fecha loading
+    if (!mounted) return;
+
+    List<AppInfo> populares = [];
+    List<AppInfo> outros = [];
+
+    for (var app in appsInstalados) {
+      if (_appsPopularesPkg.contains(app.packageName)) {
+        populares.add(app);
+      } else {
+        outros.add(app);
+      }
+    }
+
+    Map<String, String> selecionados = Map.from(_appsBloqueados);
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Widget buildAppTile(AppInfo app) {
+            bool marcado = selecionados.containsKey(app.packageName);
+            return CheckboxListTile(
+              value: marcado,
+              activeColor: Colors.green,
+              secondary: app.icon != null
+                  ? Image.memory(app.icon!, width: 36, height: 36)
+                  : const Icon(Icons.android, size: 36),
+              title: Text(app.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              onChanged: (bool? val) {
+                setDialogState(() {
+                  if (val == true) {
+                    selecionados[app.packageName] = app.name;
+                  } else {
+                    selecionados.remove(app.packageName);
+                  }
+                });
+              },
+            );
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.block, color: Colors.red),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Apps de Distração')),
+                if (selecionados.isNotEmpty)
+                  Chip(
+                    label: Text('${selecionados.length}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    backgroundColor: Colors.red,
+                    padding: EdgeInsets.zero,
+                  ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 450,
+              child: appsInstalados.isEmpty
+                  ? const Center(child: Text('Nenhum app encontrado.'))
+                  : ListView(
+                      children: [
+                        if (populares.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Text('🔥 Populares', style: GoogleFonts.raleway(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red[700])),
+                          ),
+                          ...populares.map(buildAppTile),
+                          const Divider(thickness: 2),
+                        ],
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Text('📱 Todos os Apps', style: GoogleFonts.raleway(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[700])),
+                        ),
+                        ...outros.map(buildAppTile),
+                      ],
+                    ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() => _appsBloqueados = selecionados);
+                  _salvarAppsGlobais(selecionados);
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Salvar'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _iniciarTimer() async {
+    // Inicia o bloqueio real dos apps
+    if (_appsBloqueados.isNotEmpty) {
+      await AppBlockerChannel.setBlockedApps(_appsBloqueados.keys.toList(), "Modo Foco Manual");
+    }
+
     setState(() {
       _segundosRestantes = _minutosEscolhidos * 60;
       _emAndamento = true;
@@ -45,7 +209,6 @@ class _FocoScreenState extends State<FocoScreen> {
           _segundosRestantes--;
         });
       } else {
-        // Timer acabou! Sessão concluída com sucesso
         _timer?.cancel();
         _finalizarSessao(sucesso: true);
       }
@@ -82,15 +245,16 @@ class _FocoScreenState extends State<FocoScreen> {
   }
 
   Future<void> _finalizarSessao({required bool sucesso}) async {
+    // Desliga o bloqueio nativo ao encerrar
+    await AppBlockerChannel.clearBlockedApps();
+
     DateTime fimSessao = DateTime.now();
 
-    // Calcula minutos efetivamente focados
     int minutosReais = _inicioSessao != null
         ? fimSessao.difference(_inicioSessao!).inMinutes
         : 0;
     if (minutosReais < 1) minutosReais = 1;
 
-    // Calcula pontos: 1 ponto por minuto focado (só se completou)
     int pontos = sucesso ? _minutosEscolhidos : 0;
 
     SessaoFoco sessao = SessaoFoco(
@@ -179,6 +343,51 @@ class _FocoScreenState extends State<FocoScreen> {
             ),
             textAlign: TextAlign.center,
           ),
+          
+          if (!_emAndamento) ...[
+            const SizedBox(height: 24),
+            // Aba de configuração rápida de apps
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red[200]!)
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.block, color: Colors.red[600]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Apps a bloquear:",
+                          style: GoogleFonts.raleway(fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                        Text(
+                          _appsBloqueados.isEmpty
+                              ? "Nenhum app selecionado"
+                              : "${_appsBloqueados.length} apps selecionados",
+                          style: TextStyle(color: Colors.red[700], fontSize: 13),
+                        )
+                      ],
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: _abrirSeletorApps,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red[700],
+                      side: BorderSide(color: Colors.red[300]!)
+                    ),
+                    child: const Text('Configurar'),
+                  )
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 48),
 
           // Timer circular
@@ -188,7 +397,6 @@ class _FocoScreenState extends State<FocoScreen> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Anel de progresso
                 SizedBox(
                   width: 250,
                   height: 250,
@@ -201,7 +409,6 @@ class _FocoScreenState extends State<FocoScreen> {
                     ),
                   ),
                 ),
-                // Tempo no centro
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -229,7 +436,7 @@ class _FocoScreenState extends State<FocoScreen> {
           ),
           const SizedBox(height: 48),
 
-          // Seletor de tempo (só aparece quando NÃO está em andamento)
+          // Seletor de tempo
           if (!_emAndamento) ...[
             Text(
               "Duração da sessão",
@@ -248,108 +455,86 @@ class _FocoScreenState extends State<FocoScreen> {
                 ..._opcoesMinutos.map((minutos) {
                   bool selecionado = _minutosEscolhidos == minutos;
                   return ChoiceChip(
-                    label: Text('${minutos}m'),
+                    label: Text('$minutos min'),
                     selected: selecionado,
-                    selectedColor: Colors.green[600],
-                    labelStyle: TextStyle(
-                      color: selecionado ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    onSelected: (selected) {
-                      setState(() {
-                        _minutosEscolhidos = minutos;
-                        _segundosRestantes = minutos * 60;
-                      });
+                    onSelected: (bool selected) {
+                      if (selected) {
+                        setState(() {
+                          _minutosEscolhidos = minutos;
+                          _segundosRestantes = minutos * 60;
+                        });
+                      }
                     },
+                    selectedColor: Colors.green[100],
+                    labelStyle: TextStyle(
+                      color: selecionado ? Colors.green[800] : Colors.black54,
+                      fontWeight: selecionado ? FontWeight.bold : FontWeight.normal,
+                    ),
                   );
-                }),
-                // Chip Personalizado
+                }).toList(),
                 ActionChip(
-                  avatar: Icon(
-                    Icons.edit,
-                    size: 18,
-                    color: !_opcoesMinutos.contains(_minutosEscolhidos)
-                        ? Colors.white
-                        : Colors.green[700],
-                  ),
-                  label: Text(
-                    !_opcoesMinutos.contains(_minutosEscolhidos)
-                        ? '${_minutosEscolhidos}m'
-                        : 'Personalizado',
-                  ),
-                  backgroundColor: !_opcoesMinutos.contains(_minutosEscolhidos)
-                      ? Colors.green[600]
-                      : null,
-                  labelStyle: TextStyle(
-                    color: !_opcoesMinutos.contains(_minutosEscolhidos)
-                        ? Colors.white
-                        : Colors.black87,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  onPressed: () async {
-                    final controller = TextEditingController();
-                    final resultado = await showDialog<int>(
+                  label: const Text('Personalizar'),
+                  avatar: const Icon(Icons.edit, size: 16),
+                  onPressed: () {
+                    final controller = TextEditingController(text: _minutosEscolhidos.toString());
+                    showDialog(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        title: const Text('Tempo Personalizado'),
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Tempo personalizado'),
                         content: TextField(
                           controller: controller,
                           keyboardType: TextInputType.number,
-                          autofocus: true,
                           decoration: const InputDecoration(
                             labelText: 'Minutos',
-                            hintText: 'Ex: 35',
-                            border: OutlineInputBorder(),
-                            suffixText: 'min',
+                            hintText: 'Ex: 120',
                           ),
                         ),
                         actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
                           TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancelar'),
-                          ),
-                          ElevatedButton(
                             onPressed: () {
-                              int? val = int.tryParse(controller.text);
-                              if (val != null && val > 0 && val <= 480) {
-                                Navigator.pop(context, val);
+                              int? m = int.tryParse(controller.text);
+                              if (m != null && m > 0) {
+                                setState(() {
+                                  _minutosEscolhidos = m;
+                                  _segundosRestantes = m * 60;
+                                });
+                                Navigator.pop(ctx);
                               }
                             },
-                            child: const Text('Confirmar'),
+                            child: const Text('Salvar'),
                           ),
                         ],
                       ),
                     );
-                    if (resultado != null) {
-                      setState(() {
-                        _minutosEscolhidos = resultado;
-                        _segundosRestantes = resultado * 60;
-                      });
-                    }
                   },
                 ),
               ],
             ),
-            const SizedBox(height: 32),
           ],
 
-          // Botões de ação
+          const SizedBox(height: 48),
+
+          // Botões de Ação
           if (!_emAndamento)
             SizedBox(
               width: double.infinity,
               height: 56,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: _iniciarTimer,
-                icon: const Icon(Icons.play_arrow, size: 28),
-                label: Text(
-                  "Iniciar Foco",
-                  style: GoogleFonts.raleway(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green[600],
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  "Iniciar Foco",
+                  style: GoogleFonts.raleway(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             )
@@ -359,17 +544,21 @@ class _FocoScreenState extends State<FocoScreen> {
                 Expanded(
                   child: SizedBox(
                     height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: _pausado ? _retomarTimer : _pausarTimer,
-                      icon: Icon(_pausado ? Icons.play_arrow : Icons.pause, size: 24),
-                      label: Text(
-                        _pausado ? "Retomar" : "Pausar",
-                        style: GoogleFonts.raleway(fontSize: 16, fontWeight: FontWeight.bold),
+                    child: OutlinedButton(
+                      onPressed: _desistirTimer,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange[600],
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Text(
+                        "Desistir",
+                        style: GoogleFonts.raleway(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -378,51 +567,26 @@ class _FocoScreenState extends State<FocoScreen> {
                 Expanded(
                   child: SizedBox(
                     height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: _desistirTimer,
-                      icon: const Icon(Icons.stop, size: 24),
-                      label: Text(
-                        "Desistir",
-                        style: GoogleFonts.raleway(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                    child: ElevatedButton(
+                      onPressed: _pausado ? _retomarTimer : _pausarTimer,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[600],
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        backgroundColor: _pausado ? Colors.green[600] : Colors.orange,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        _pausado ? "Retomar" : "Pausar",
+                        style: GoogleFonts.raleway(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ],
-            ),
-
-          const SizedBox(height: 24),
-
-          // Info de pontos
-          if (!_emAndamento)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.green[700]),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Você ganha 1 ponto por minuto focado ao completar a sessão inteira. Desistir não dá pontos!",
-                      style: GoogleFonts.raleway(
-                        fontSize: 14,
-                        color: Colors.green[800],
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
         ],
       ),
