@@ -255,7 +255,7 @@ class _FocoScreenState extends State<FocoScreen> {
         : 0;
     if (minutosReais < 1) minutosReais = 1;
 
-    int pontos = sucesso ? _minutosEscolhidos : 0;
+    int pontos = sucesso ? _minutosEscolhidos * 2 : 0;
 
     SessaoFoco sessao = SessaoFoco(
       inicioSessao: _inicioSessao ?? fimSessao,

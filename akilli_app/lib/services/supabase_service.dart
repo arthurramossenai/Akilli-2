@@ -199,6 +199,29 @@ class SupabaseService {
     }
   }
 
+  /// Adiciona pontos diretos ao usuário logado (ex: por tempo poupado ou tarefa)
+  Future<bool> adicionarPontos(int quantidade) async {
+    try {
+      if (_usuarioLogado?.idUsuario == null || quantidade <= 0) return false;
+      int pontosAtuais = _usuarioLogado!.pontos ?? 0;
+      int novosPontos = (pontosAtuais + quantidade).round();
+      
+      await _client
+          .from('usuarios')
+          .update({'pontos': novosPontos})
+          .eq('id_usuario', _usuarioLogado!.idUsuario!);
+          
+      _usuarioLogado = Usuario.fromJson({
+        ..._usuarioLogado!.toJson(),
+        'pontos': novosPontos,
+      });
+      return true;
+    } catch (e) {
+      print('Erro ao adicionar pontos: $e');
+      return false;
+    }
+  }
+
   // ==================== RANKING ====================
 
   /// Busca todos os usuários ordenados por pontos (ranking global)

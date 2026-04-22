@@ -10,6 +10,7 @@ import 'ranking_screen.dart';
 import '../services/supabase_service.dart';
 import '../services/device_service.dart';
 import '../services/app_blocker_channel.dart';
+import '../services/points_manager.dart';
 import '../models/tarefa.dart';
 import 'login_screen.dart';
 
@@ -30,6 +31,9 @@ class _MainTabsScreenState extends State<MainTabsScreen> {
     super.initState();
     _pedirPermissoes();
     _checkMotivation();
+    
+    // Tenta sincronizar os pontos baseados no tempo de tela poupado
+    PointsManager.syncDailySavedTimePoints(_supabaseService);
     
     // Inicia verificação periódica de tarefas para bloqueio (a cada 30 segundos)
     _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) => _sincronizarBloqueio());

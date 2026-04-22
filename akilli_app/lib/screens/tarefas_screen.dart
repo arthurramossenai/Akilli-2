@@ -288,6 +288,37 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                     );
                                     _carregarTarefas();
                                   } else {
+                                    // Se estiver marcando como concluída, verifica se ganha bônus de tempo
+                                    if (value == 'Concluída' && tarefa.andamento != 'Concluída') {
+                                      int minutosTracker = 0;
+                                      try {
+                                        if (tarefa.dataInicio != null && tarefa.dataFim != null) {
+                                          DateTime parseDate(String dt) {
+                                            final partes = dt.split(' ');
+                                            final d = partes[0].split('-');
+                                            int h = 0, m = 0;
+                                            if (partes.length > 1) {
+                                              final t = partes[1].split(':');
+                                              h = int.parse(t[0]); m = int.parse(t[1]);
+                                            }
+                                            return DateTime(int.parse(d[0]), int.parse(d[1]), int.parse(d[2]), h, m);
+                                          }
+                                          final ini = parseDate(tarefa.dataInicio!);
+                                          final fim = parseDate(tarefa.dataFim!);
+                                          minutosTracker = fim.difference(ini).inMinutes;
+                                        }
+                                      } catch (_) {}
+                                      
+                                      // 2 pontos/minuto + 20% bônus = 2.4
+                                      if (minutosTracker > 0) {
+                                        int ptsExtra = (minutosTracker * 2.4).round();
+                                        await _supabaseService.adicionarPontos(ptsExtra);
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Nova tarefa concluída! +$ptsExtra pontos 🎉')));
+                                        }
+                                      }
+                                    }
+
                                     await _supabaseService.atualizarAndamento(
                                       tarefa.idTarefa!,
                                       value,
