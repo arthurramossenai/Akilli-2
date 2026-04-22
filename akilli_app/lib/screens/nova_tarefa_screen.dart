@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/tarefa.dart';
@@ -20,15 +21,35 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
   final _descricaoController = TextEditingController();
   final _dataInicioController = TextEditingController();
   final _dataFimController = TextEditingController();
+  final _horaInicioController = TextEditingController();
+  final _horaFimController = TextEditingController();
 
   String _prioridadeSelecionada = 'Média';
   bool _modoFoco = false;
   String? _appProdutividade;
-  List<String> _appsBloqueados = []; // Lista de package_names selecionados
+  
+  // Armazena {packageName: displayName} dos apps bloqueados
+  Map<String, String> _appsBloqueados = {};
 
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
   bool _isEditMode = false;
+
+  // Package names de apps populares de distração
+  static const List<String> _appsPopularesPkg = [
+    'com.instagram.android',
+    'com.zhiliaoapp.musically', // TikTok
+    'com.twitter.android',
+    'com.facebook.katana',
+    'com.snapchat.android',
+    'com.whatsapp',
+    'com.google.android.youtube',
+    'com.reddit.frontpage',
+    'com.discord',
+    'com.spotify.music',
+    'com.netflix.mediaclient',
+    'tv.twitch.android.app',
+  ];
 
   @override
   void initState() {
@@ -38,14 +59,34 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
       final t = widget.tarefaExistente!;
       _tituloController.text = t.titulo;
       _descricaoController.text = t.descricao;
-      _dataInicioController.text = t.dataInicio ?? '';
-      _dataFimController.text = t.dataFim ?? '';
       _prioridadeSelecionada = t.prioridade;
       _modoFoco = t.modoFoco;
       _appProdutividade = t.appProdutividade;
+      
+      // Parse da data e hora (formato: "2025-04-22" ou "2025-04-22 14:30")
+      if (t.dataInicio != null && t.dataInicio!.isNotEmpty) {
+        final partes = t.dataInicio!.split(' ');
+        _dataInicioController.text = partes[0];
+        if (partes.length > 1) _horaInicioController.text = partes[1];
+      }
+      if (t.dataFim != null && t.dataFim!.isNotEmpty) {
+        final partes = t.dataFim!.split(' ');
+        _dataFimController.text = partes[0];
+        if (partes.length > 1) _horaFimController.text = partes[1];
+      }
+      
+      // Parse dos apps bloqueados (JSON com {pkg: name})
       if (t.appsBloqueados != null && t.appsBloqueados!.isNotEmpty) {
         try {
-          _appsBloqueados = List<String>.from(jsonDecode(t.appsBloqueados!));
+          final decoded = jsonDecode(t.appsBloqueados!);
+          if (decoded is Map) {
+            _appsBloqueados = Map<String, String>.from(decoded);
+          } else if (decoded is List) {
+            // Compatibilidade com formato antigo (lista de strings)
+            for (var pkg in decoded) {
+              _appsBloqueados[pkg.toString()] = pkg.toString().split('.').last;
+            }
+          }
         } catch (_) {}
       }
     }
@@ -63,8 +104,18 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
     }
   }
 
+  Future<void> _selecionarHora(TextEditingController controller) async {
+    final hora = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (hora != null) {
+      controller.text = '${hora.hour.toString().padLeft(2, '0')}:${hora.minute.toString().padLeft(2, '0')}';
+    }
+  }
+
   Future<void> _abrirSeletorApps() async {
-    // Mostra loading enquanto carrega os apps do dispositivo
+    // Mostra loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -79,48 +130,100 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
     }
 
     if (mounted) Navigator.pop(context); // Fecha loading
-
     if (!mounted) return;
 
-    // Cria cópia local da seleção para o dialog
-    List<String> selecionados = List.from(_appsBloqueados);
+    // Separa apps populares (que existem no dispositivo) dos demais
+    List<AppInfo> populares = [];
+    List<AppInfo> outros = [];
+
+    for (var app in appsInstalados) {
+      if (_appsPopularesPkg.contains(app.packageName)) {
+        populares.add(app);
+      } else {
+        outros.add(app);
+      }
+    }
+
+    // Cópia local da seleção
+    Map<String, String> selecionados = Map.from(_appsBloqueados);
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
+          Widget buildAppTile(AppInfo app) {
+            bool marcado = selecionados.containsKey(app.packageName);
+            return CheckboxListTile(
+              value: marcado,
+              activeColor: Colors.green,
+              secondary: app.icon != null
+                  ? Image.memory(app.icon!, width: 36, height: 36)
+                  : const Icon(Icons.android, size: 36),
+              title: Text(app.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              onChanged: (bool? val) {
+                setDialogState(() {
+                  if (val == true) {
+                    selecionados[app.packageName] = app.name;
+                  } else {
+                    selecionados.remove(app.packageName);
+                  }
+                });
+              },
+            );
+          }
+
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Selecionar Apps para Bloquear'),
+            title: Row(
+              children: [
+                const Icon(Icons.block, color: Colors.red),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Selecionar Apps')),
+                if (selecionados.isNotEmpty)
+                  Chip(
+                    label: Text('${selecionados.length}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    backgroundColor: Colors.green,
+                    padding: EdgeInsets.zero,
+                  ),
+              ],
+            ),
             content: SizedBox(
               width: double.maxFinite,
-              height: 400,
+              height: 450,
               child: appsInstalados.isEmpty
                   ? const Center(child: Text('Nenhum app encontrado.\nVerifique as permissões.'))
-                  : ListView.builder(
-                      itemCount: appsInstalados.length,
-                      itemBuilder: (context, index) {
-                        final app = appsInstalados[index];
-                        bool marcado = selecionados.contains(app.packageName);
-                        return CheckboxListTile(
-                          value: marcado,
-                          activeColor: Colors.green,
-                          title: Text(app.name, style: const TextStyle(fontSize: 14)),
-                          subtitle: Text(
-                            app.packageName,
-                            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  : ListView(
+                      children: [
+                        // Seção Apps Populares
+                        if (populares.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Text(
+                              '🔥 Apps Populares',
+                              style: GoogleFonts.raleway(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red[700],
+                              ),
+                            ),
                           ),
-                          onChanged: (bool? val) {
-                            setDialogState(() {
-                              if (val == true) {
-                                selecionados.add(app.packageName);
-                              } else {
-                                selecionados.remove(app.packageName);
-                              }
-                            });
-                          },
-                        );
-                      },
+                          ...populares.map(buildAppTile),
+                          const Divider(thickness: 2),
+                        ],
+                        // Seção Outros Apps
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Text(
+                            '📱 Todos os Apps',
+                            style: GoogleFonts.raleway(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                        ...outros.map(buildAppTile),
+                      ],
                     ),
             ),
             actions: [
@@ -128,21 +231,28 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancelar'),
               ),
-              ElevatedButton(
+              ElevatedButton.icon(
                 onPressed: () {
                   setState(() {
                     _appsBloqueados = selecionados;
                   });
                   Navigator.pop(context);
                 },
+                icon: const Icon(Icons.check, size: 18),
+                label: Text('Pronto (${selecionados.length})'),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                child: Text('Pronto (${selecionados.length})'),
               ),
             ],
           );
         },
       ),
     );
+  }
+
+  String _buildDataCompleta(String data, String hora) {
+    if (data.isEmpty) return '';
+    if (hora.isEmpty) return data;
+    return '$data $hora';
   }
 
   Future<void> _salvarTarefa() async {
@@ -157,13 +267,16 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
       _isLoading = true;
     });
 
+    String? dataInicio = _buildDataCompleta(_dataInicioController.text, _horaInicioController.text);
+    String? dataFim = _buildDataCompleta(_dataFimController.text, _horaFimController.text);
+
     Tarefa tarefa = Tarefa(
       idTarefa: widget.tarefaExistente?.idTarefa,
       titulo: _tituloController.text,
       descricao: _descricaoController.text,
       prioridade: _prioridadeSelecionada,
-      dataInicio: _dataInicioController.text.isNotEmpty ? _dataInicioController.text : null,
-      dataFim: _dataFimController.text.isNotEmpty ? _dataFimController.text : null,
+      dataInicio: dataInicio.isNotEmpty ? dataInicio : null,
+      dataFim: dataFim.isNotEmpty ? dataFim : null,
       andamento: widget.tarefaExistente?.andamento ?? 'Pendente',
       modoFoco: _modoFoco,
       appProdutividade: _appProdutividade,
@@ -264,7 +377,7 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
               activeColor: Colors.green,
             ),
 
-            // Seletor de apps (só aparece quando Modo Foco está ativo)
+            // Seletor de apps bloqueados (só aparece quando Modo Foco ativo)
             if (_modoFoco) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(
@@ -286,15 +399,13 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
-                  children: _appsBloqueados.map((pkg) {
-                    // Mostra o nome curto do package
-                    String label = pkg.split('.').last;
+                  children: _appsBloqueados.entries.map((entry) {
                     return Chip(
-                      label: Text(label, style: const TextStyle(fontSize: 12)),
+                      label: Text(entry.value, style: const TextStyle(fontSize: 12)),
                       deleteIcon: const Icon(Icons.close, size: 16),
                       onDeleted: () {
                         setState(() {
-                          _appsBloqueados.remove(pkg);
+                          _appsBloqueados.remove(entry.key);
                         });
                       },
                     );
@@ -321,35 +432,78 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
               },
             ),
             const SizedBox(height: 16),
+
+            // Data e Hora de Início
+            Text('Início', style: GoogleFonts.raleway(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
+                  flex: 3,
                   child: TextField(
                     controller: _dataInicioController,
                     readOnly: true,
                     onTap: () => _selecionarData(_dataInicioController),
                     decoration: const InputDecoration(
-                      labelText: 'Data de Início',
+                      labelText: 'Data',
                       border: OutlineInputBorder(),
                       suffixIcon: Icon(Icons.calendar_today),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
+                  flex: 2,
                   child: TextField(
-                    controller: _dataFimController,
+                    controller: _horaInicioController,
                     readOnly: true,
-                    onTap: () => _selecionarData(_dataFimController),
+                    onTap: () => _selecionarHora(_horaInicioController),
                     decoration: const InputDecoration(
-                      labelText: 'Data de Fim',
+                      labelText: 'Hora',
                       border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
+                      suffixIcon: Icon(Icons.access_time),
                     ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+
+            // Data e Hora de Fim
+            Text('Fim', style: GoogleFonts.raleway(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: TextField(
+                    controller: _dataFimController,
+                    readOnly: true,
+                    onTap: () => _selecionarData(_dataFimController),
+                    decoration: const InputDecoration(
+                      labelText: 'Data',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _horaFimController,
+                    readOnly: true,
+                    onTap: () => _selecionarHora(_horaFimController),
+                    decoration: const InputDecoration(
+                      labelText: 'Hora',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.access_time),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
             const SizedBox(height: 32),
             SizedBox(
               height: 50,

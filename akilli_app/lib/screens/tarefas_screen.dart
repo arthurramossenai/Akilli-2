@@ -59,6 +59,60 @@ class _TarefasScreenState extends State<TarefasScreen> {
     }
   }
 
+  /// Verifica se a tarefa com modo foco está ativa no momento atual
+  bool _isFocoAtivo(Tarefa tarefa) {
+    if (!tarefa.modoFoco) return false;
+    
+    DateTime agora = DateTime.now();
+    
+    // Parse data_inicio (formato: "2025-04-22" ou "2025-04-22 14:30")
+    DateTime? inicio;
+    DateTime? fim;
+    
+    if (tarefa.dataInicio != null && tarefa.dataInicio!.isNotEmpty) {
+      try {
+        final partes = tarefa.dataInicio!.split(' ');
+        final dataParts = partes[0].split('-');
+        int ano = int.parse(dataParts[0]);
+        int mes = int.parse(dataParts[1]);
+        int dia = int.parse(dataParts[2]);
+        int hora = 0, min = 0;
+        if (partes.length > 1) {
+          final horaParts = partes[1].split(':');
+          hora = int.parse(horaParts[0]);
+          min = int.parse(horaParts[1]);
+        }
+        inicio = DateTime(ano, mes, dia, hora, min);
+      } catch (_) {}
+    }
+    
+    if (tarefa.dataFim != null && tarefa.dataFim!.isNotEmpty) {
+      try {
+        final partes = tarefa.dataFim!.split(' ');
+        final dataParts = partes[0].split('-');
+        int ano = int.parse(dataParts[0]);
+        int mes = int.parse(dataParts[1]);
+        int dia = int.parse(dataParts[2]);
+        int hora = 23, min = 59;
+        if (partes.length > 1) {
+          final horaParts = partes[1].split(':');
+          hora = int.parse(horaParts[0]);
+          min = int.parse(horaParts[1]);
+        }
+        fim = DateTime(ano, mes, dia, hora, min);
+      } catch (_) {}
+    }
+    
+    if (inicio != null && fim != null) {
+      return agora.isAfter(inicio) && agora.isBefore(fim);
+    }
+    if (inicio != null && fim == null) {
+      return agora.isAfter(inicio);
+    }
+    
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,27 +207,52 @@ class _TarefasScreenState extends State<TarefasScreen> {
                         itemCount: _tarefas.length,
                         itemBuilder: (context, index) {
                           final tarefa = _tarefas[index];
+                          final bool focoAtivo = _isFocoAtivo(tarefa);
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
-                            elevation: 2,
+                            elevation: focoAtivo ? 4 : 2,
+                            color: focoAtivo ? Colors.green[50] : null,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
+                              side: focoAtivo
+                                  ? BorderSide(color: Colors.green[400]!, width: 2)
+                                  : BorderSide.none,
                             ),
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
                               ),
-                              leading: Icon(
-                                _iconeAndamento(tarefa.andamento),
-                                color: _corPrioridade(tarefa.prioridade),
-                                size: 28,
-                              ),
-                              title: Text(
-                                tarefa.titulo,
-                                style: GoogleFonts.raleway(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              leading: focoAtivo
+                                  ? const Icon(Icons.local_fire_department, color: Colors.green, size: 28)
+                                  : Icon(
+                                      _iconeAndamento(tarefa.andamento),
+                                      color: _corPrioridade(tarefa.prioridade),
+                                      size: 28,
+                                    ),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      tarefa.titulo,
+                                      style: GoogleFonts.raleway(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  if (focoAtivo)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[600],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        '🔥 EM FOCO',
+                                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                ],
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
