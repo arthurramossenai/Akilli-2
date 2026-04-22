@@ -185,11 +185,12 @@ class _MainTabsScreenState extends State<MainTabsScreen> {
       } catch (_) {}
     }
     
-    if (inicio != null && fim != null) {
-      return agora.isAfter(inicio) && agora.isBefore(fim);
-    }
-    if (inicio != null && fim == null) {
-      return agora.isAfter(inicio);
+    if (inicio != null) {
+      if (fim != null) {
+        return !agora.isBefore(inicio) && !agora.isAfter(fim);
+      } else {
+        return !agora.isBefore(inicio);
+      }
     }
     
     return false;

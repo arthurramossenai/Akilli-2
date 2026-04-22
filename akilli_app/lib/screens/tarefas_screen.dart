@@ -105,11 +105,12 @@ class _TarefasScreenState extends State<TarefasScreen> {
       } catch (_) {}
     }
     
-    if (inicio != null && fim != null) {
-      return agora.isAfter(inicio) && agora.isBefore(fim);
-    }
-    if (inicio != null && fim == null) {
-      return agora.isAfter(inicio);
+    if (inicio != null) {
+      if (fim != null) {
+        return !agora.isBefore(inicio) && !agora.isAfter(fim);
+      } else {
+        return !agora.isBefore(inicio);
+      }
     }
     
     return false;
@@ -321,12 +322,12 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                       } catch (_) {}
                                       
                                       // 2 pontos/minuto + 20% bônus = 2.4
-                                      if (minutosTracker > 0) {
-                                        int ptsExtra = (minutosTracker * 2.4).round();
-                                        await _supabaseService.adicionarPontos(ptsExtra);
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tarefa concluída! +$ptsExtra pontos 🎉')));
-                                        }
+                                      if (minutosTracker <= 0) minutosTracker = 1;
+                                      
+                                      int ptsExtra = (minutosTracker * 2.4).round();
+                                      await _supabaseService.adicionarPontos(ptsExtra);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tarefa concluída! +$ptsExtra pontos 🎉')));
                                       }
                                     }
 

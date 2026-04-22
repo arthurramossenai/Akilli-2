@@ -66,21 +66,12 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
-        val expectedComponentName = ComponentName(this, AppBlockerService::class.java)
         val enabledServices = Settings.Secure.getString(
             contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
         
-        val colonSplitter = TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabledServices)
-        while (colonSplitter.hasNext()) {
-            val componentNameString = colonSplitter.next()
-            val enabledComponent = ComponentName.unflattenFromString(componentNameString)
-            if (enabledComponent != null && enabledComponent == expectedComponentName) {
-                return true
-            }
-        }
-        return false
+        return enabledServices.contains("com.example.akilli_app/com.example.akilli_app.AppBlockerService") || 
+               enabledServices.contains("AppBlockerService")
     }
 }
