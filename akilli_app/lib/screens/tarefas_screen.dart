@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/tarefa.dart';
 import '../services/supabase_service.dart';
+import '../services/app_blocker_channel.dart';
 import 'nova_tarefa_screen.dart';
 import 'login_screen.dart';
 
@@ -62,6 +63,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
   /// Verifica se a tarefa com modo foco está ativa no momento atual
   bool _isFocoAtivo(Tarefa tarefa) {
     if (!tarefa.modoFoco) return false;
+    if (tarefa.andamento == 'Concluída' || tarefa.andamento == 'Cancelada') return false;
     
     DateTime agora = DateTime.now();
     
@@ -277,6 +279,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                 onSelected: (value) async {
                                   if (tarefa.idTarefa == null) return;
                                   if (value == 'deletar') {
+                                    await AppBlockerChannel.clearBlockedApps();
                                     await _supabaseService.deletarTarefa(tarefa.idTarefa!);
                                     _carregarTarefas();
                                   } else if (value == 'editar') {
@@ -288,11 +291,12 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                     );
                                     _carregarTarefas();
                                   } else {
-                                    // Se estiver marcando como concluída, verifica se ganha bônus de tempo
+                                    // Se estiver marcando como concluída
                                     if (value == 'Concluída' && tarefa.andamento != 'Concluída') {
+                                      await AppBlockerChannel.clearBlockedApps();
                                       int minutosTracker = 0;
                                       try {
-                                        if (tarefa.dataInicio != null && tarefa.dataFim != null) {
+                                        if (tarefa.dataInicio != null) {
                                           DateTime parseDate(String dt) {
                                             final partes = dt.split(' ');
                                             final d = partes[0].split('-');
@@ -304,8 +308,15 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                             return DateTime(int.parse(d[0]), int.parse(d[1]), int.parse(d[2]), h, m);
                                           }
                                           final ini = parseDate(tarefa.dataInicio!);
-                                          final fim = parseDate(tarefa.dataFim!);
-                                          minutosTracker = fim.difference(ini).inMinutes;
+                                          final agora = DateTime.now();
+                                          DateTime fimConsiderado = agora;
+                                          if (tarefa.dataFim != null && tarefa.dataFim!.isNotEmpty) {
+                                            final fimReal = parseDate(tarefa.dataFim!);
+                                            if (agora.isAfter(fimReal)) {
+                                              fimConsiderado = fimReal;
+                                            }
+                                          }
+                                          minutosTracker = fimConsiderado.difference(ini).inMinutes;
                                         }
                                       } catch (_) {}
                                       
@@ -314,7 +325,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                         int ptsExtra = (minutosTracker * 2.4).round();
                                         await _supabaseService.adicionarPontos(ptsExtra);
                                         if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Nova tarefa concluída! +$ptsExtra pontos 🎉')));
+                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tarefa concluída! +$ptsExtra pontos 🎉')));
                                         }
                                       }
                                     }

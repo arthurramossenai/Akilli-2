@@ -91,10 +91,15 @@ class _NovaTarefaScreenState extends State<NovaTarefaScreen> {
         } catch (_) {}
       }
     } else {
-      // Valor padrão para data/hora inicial de nova tarefa
+      // Valor padrão para data/hora inicial e final de nova tarefa
       final agora = DateTime.now();
-      _dataInicioController.text = '${agora.year}-${agora.month.toString().padLeft(2, '0')}-${agora.day.toString().padLeft(2, '0')}';
-      _horaInicioController.text = '${agora.hour.toString().padLeft(2, '0')}:${agora.minute.toString().padLeft(2, '0')}';
+      final dataFormatada = '${agora.year}-${agora.month.toString().padLeft(2, '0')}-${agora.day.toString().padLeft(2, '0')}';
+      final horaFormatada = '${agora.hour.toString().padLeft(2, '0')}:${agora.minute.toString().padLeft(2, '0')}';
+      
+      _dataInicioController.text = dataFormatada;
+      _horaInicioController.text = horaFormatada;
+      _dataFimController.text = dataFormatada;
+      _horaFimController.text = horaFormatada;
     }
   }
 

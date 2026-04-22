@@ -144,6 +144,7 @@ class _MainTabsScreenState extends State<MainTabsScreen> {
 
   bool _isFocoAtivo(Tarefa tarefa) {
     if (!tarefa.modoFoco) return false;
+    if (tarefa.andamento == 'Concluída' || tarefa.andamento == 'Cancelada') return false;
     
     DateTime agora = DateTime.now();
     
@@ -217,12 +218,15 @@ class _MainTabsScreenState extends State<MainTabsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: OutlinedButton(
-              onPressed: () {
+              onPressed: () async {
+                await AppBlockerChannel.clearBlockedApps();
                 _supabaseService.logout();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
+                if (mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  );
+                }
               },
               child: const Text("Sair"),
             ),
