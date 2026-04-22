@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'tarefas_screen.dart';
 import 'dashboard_screen.dart';
+import 'foco_screen.dart';
+import 'ranking_screen.dart';
 import '../services/supabase_service.dart';
 import '../services/device_service.dart';
 import 'login_screen.dart';
@@ -29,12 +31,11 @@ class _MainTabsScreenState extends State<MainTabsScreen> {
     await DeviceService.checkAndRequestUsagePermission();
   }
 
-  // Vamos substituir os "Containers" vazios pelas telas reais assim que criá-las
   final List<Widget> _screens = [
-    const TarefasScreen(isTab: true), // Precisamos avisar o TarefasScreen que ele está em uma aba para tirar a AppBar dele
-    const Center(child: Text("Em breve: Modo Foco Global")), // Tela Foco
-    const DashboardScreen(), // Tela Apps (Dashboard)
-    const Center(child: Text("Em breve: Ranking Premium")), // Tela Ranking
+    const TarefasScreen(isTab: true),
+    const FocoScreen(),
+    const DashboardScreen(),
+    const RankingScreen(),
   ];
 
   @override

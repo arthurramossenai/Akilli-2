@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/usuario.dart';
 import '../models/tarefa.dart';
+import '../models/sessao_foco.dart';
 
 class SupabaseService {
   // Singleton - garante que o usuário logado persiste entre telas
@@ -124,6 +125,66 @@ class SupabaseService {
     } catch (e) {
       print('Erro ao deletar tarefa: $e');
       return false;
+    }
+  }
+
+  // ==================== SESSÕES DE FOCO ====================
+
+  /// Salva uma sessão de foco finalizada e adiciona pontos ao usuário
+  Future<bool> salvarSessaoFoco(SessaoFoco sessao) async {
+    try {
+      if (_usuarioLogado?.idUsuario == null) return false;
+
+      // Insere a sessão na tabela
+      await _client.from('sessoes_foco').insert({
+        'id_usuario': _usuarioLogado!.idUsuario,
+        if (sessao.idTarefa != null) 'id_tarefa': sessao.idTarefa,
+        'inicio_sessao': sessao.inicioSessao.toIso8601String(),
+        'fim_sessao': sessao.fimSessao.toIso8601String(),
+        'duracao_minutos': sessao.duracaoMinutos,
+        'status_sessao': sessao.statusSessao,
+        if (sessao.appsBloqueados != null) 'apps_bloqueados': sessao.appsBloqueados,
+        'falhas': sessao.falhas,
+        'pontos_ganhos': sessao.pontosGanhos,
+      });
+
+      // Atualiza os pontos do usuário
+      if (sessao.pontosGanhos > 0) {
+        int pontosAtuais = _usuarioLogado!.pontos ?? 0;
+        int novosPontos = pontosAtuais + sessao.pontosGanhos;
+        await _client
+            .from('usuarios')
+            .update({'pontos': novosPontos})
+            .eq('id_usuario', _usuarioLogado!.idUsuario!);
+        // Atualiza localmente também
+        _usuarioLogado = Usuario.fromJson({
+          ..._usuarioLogado!.toJson(),
+          'pontos': novosPontos,
+        });
+      }
+
+      return true;
+    } catch (e) {
+      print('Erro ao salvar sessão de foco: $e');
+      return false;
+    }
+  }
+
+  // ==================== RANKING ====================
+
+  /// Busca todos os usuários ordenados por pontos (ranking global)
+  Future<List<Map<String, dynamic>>> getRanking() async {
+    try {
+      final data = await _client
+          .from('usuarios')
+          .select('id_usuario, nome, usuario, pontos')
+          .order('pontos', ascending: false)
+          .limit(50);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Erro ao buscar ranking: $e');
+      return [];
     }
   }
 }

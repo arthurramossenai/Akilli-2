@@ -43,7 +43,7 @@ class SessaoFoco {
         if (idUsuario != null) 'id_usuario': idUsuario,
         if (idTarefa != null) 'id_tarefa': idTarefa,
         'inicio_sessao': inicioSessao.toIso8601String(),
-        'fimSessao': fimSessao.toIso8601String(),
+        'fim_sessao': fimSessao.toIso8601String(),
         'duracao_minutos': duracaoMinutos,
         'status_sessao': statusSessao,
         if (appsBloqueados != null) 'apps_bloqueados': appsBloqueados,
