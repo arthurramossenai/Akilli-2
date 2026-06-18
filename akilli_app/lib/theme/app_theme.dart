@@ -1,46 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_colors.dart';
 
 final ThemeData akilliTheme = ThemeData(
   useMaterial3: true,
-  scaffoldBackgroundColor: const Color(0xFFFFFFFF), // --bg
+  scaffoldBackgroundColor: AppColors.bone,
   textTheme: GoogleFonts.ralewayTextTheme().apply(
-    bodyColor: const Color(0xFF0E1215), // --text
-    displayColor: const Color(0xFF0E1215),
+    bodyColor: AppColors.darkText,
+    displayColor: AppColors.darkText,
   ),
   colorScheme: ColorScheme.fromSeed(
-    seedColor: const Color(0xFF0F3A36), // --brand-900
-    primary: const Color(0xFF144E45), // --accent-600
-    surface: const Color(0xFFE5E6E7), // --surface
+    seedColor: AppColors.kombuGreen,
+    primary: AppColors.kombuGreen,
+    secondary: AppColors.mossGreen,
+    surface: AppColors.bone,
+    onPrimary: AppColors.bone,
+    onSurface: AppColors.darkText,
   ),
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Colors.white,
+  appBarTheme: AppBarTheme(
+    backgroundColor: AppColors.bone,
     elevation: 0,
-    iconTheme: IconThemeData(color: Colors.black87),
-    titleTextStyle: TextStyle(
-      color: Colors.black87,
+    iconTheme: const IconThemeData(color: AppColors.kombuGreen),
+    titleTextStyle: GoogleFonts.raleway(
+      color: AppColors.kombuGreen,
       fontSize: 20,
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w700,
     ),
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFF144E45),
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.tan,
+      foregroundColor: AppColors.kombuGreen,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       textStyle: GoogleFonts.raleway(fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
-      foregroundColor: const Color(0xFF144E45),
-      side: const BorderSide(color: Color(0xFF144E45)),
+      foregroundColor: AppColors.kombuGreen,
+      side: const BorderSide(color: AppColors.kombuGreen),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
     ),
+  ),
+  bottomNavigationBarTheme: BottomNavigationBarThemeData(
+    backgroundColor: AppColors.bone,
+    selectedItemColor: AppColors.kombuGreen,
+    unselectedItemColor: AppColors.mossGreen.withValues(alpha: 0.6),
+  ),
+  switchTheme: SwitchThemeData(
+    thumbColor: WidgetStateProperty.all(AppColors.bone),
+    trackColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.selected)) {
+        return AppColors.switchActiveTrack;
+      }
+      return AppColors.switchInactiveTrack;
+    }),
+  ),
+  snackBarTheme: SnackBarThemeData(
+    backgroundColor: AppColors.kombuGreen,
+    contentTextStyle: GoogleFonts.raleway(color: Colors.white),
+    behavior: SnackBarBehavior.floating,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   ),
 );

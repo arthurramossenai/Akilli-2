@@ -32,6 +32,7 @@ class _FocoScreenState extends State<FocoScreen> {
 
   // Apps de Distração para bloqueio (Global Foco)
   Map<String, String> _appsBloqueados = {};
+  Map<String, String> _appsProdutivos = {};
 
   static const List<String> _appsPopularesPkg = [
     'com.instagram.android',
@@ -65,20 +66,23 @@ class _FocoScreenState extends State<FocoScreen> {
     final jsonApps = prefs.getString('foco_global_apps');
     if (jsonApps != null) {
       try {
-        final decoded = jsonDecode(jsonApps) as Map;
         setState(() {
-          _appsBloqueados = Map<String, String>.from(decoded);
+          _appsBloqueados = Map<String, String>.from(jsonDecode(jsonApps));
+        });
+      } catch (_) {}
+    }
+    
+    final jsonFoco = prefs.getString('foco_global_apps_produtividade');
+    if (jsonFoco != null) {
+      try {
+        setState(() {
+          _appsProdutivos = Map<String, String>.from(jsonDecode(jsonFoco));
         });
       } catch (_) {}
     }
   }
 
-  Future<void> _salvarAppsGlobais(Map<String, String> apps) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('foco_global_apps', jsonEncode(apps));
-  }
-
-  Future<void> _abrirSeletorApps() async {
+  Future<void> _abrirSeletorApps(bool isFoco) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -106,7 +110,7 @@ class _FocoScreenState extends State<FocoScreen> {
       }
     }
 
-    Map<String, String> selecionados = Map.from(_appsBloqueados);
+    Map<String, String> selecionados = Map.from(isFoco ? _appsProdutivos : _appsBloqueados);
 
     await showDialog(
       context: context,
@@ -116,7 +120,7 @@ class _FocoScreenState extends State<FocoScreen> {
             bool marcado = selecionados.containsKey(app.packageName);
             return CheckboxListTile(
               value: marcado,
-              activeColor: Colors.green,
+              activeColor: isFoco ? Colors.green : Colors.red,
               secondary: app.icon != null
                   ? Image.memory(app.icon!, width: 36, height: 36)
                   : const Icon(Icons.android, size: 36),
@@ -137,13 +141,13 @@ class _FocoScreenState extends State<FocoScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Row(
               children: [
-                const Icon(Icons.block, color: Colors.red),
+                Icon(isFoco ? Icons.star : Icons.block, color: isFoco ? Colors.green : Colors.red),
                 const SizedBox(width: 8),
-                const Expanded(child: Text('Apps de Distração')),
+                Expanded(child: Text(isFoco ? 'Apps Focados' : 'Apps de Distração')),
                 if (selecionados.isNotEmpty)
                   Chip(
                     label: Text('${selecionados.length}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                    backgroundColor: Colors.red,
+                    backgroundColor: isFoco ? Colors.green : Colors.red,
                     padding: EdgeInsets.zero,
                   ),
               ],
@@ -174,14 +178,25 @@ class _FocoScreenState extends State<FocoScreen> {
             actions: [
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
               ElevatedButton.icon(
-                onPressed: () {
-                  setState(() => _appsBloqueados = selecionados);
-                  _salvarAppsGlobais(selecionados);
-                  Navigator.pop(context);
+                onPressed: () async {
+                  setState(() {
+                    if (isFoco) {
+                      _appsProdutivos = selecionados;
+                    } else {
+                      _appsBloqueados = selecionados;
+                    }
+                  });
+                  final prefs = await SharedPreferences.getInstance();
+                  if (isFoco) {
+                    await prefs.setString('foco_global_apps_produtividade', jsonEncode(selecionados));
+                  } else {
+                    await prefs.setString('foco_global_apps', jsonEncode(selecionados));
+                  }
+                  if (context.mounted) Navigator.pop(context);
                 },
                 icon: const Icon(Icons.check, size: 18),
                 label: const Text('Salvar'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                style: ElevatedButton.styleFrom(backgroundColor: isFoco ? Colors.green : Colors.red),
               ),
             ],
           );
@@ -267,7 +282,7 @@ class _FocoScreenState extends State<FocoScreen> {
       pontosGanhos: pontos,
     );
 
-    bool salvo = await _supabaseService.salvarSessaoFoco(sessao);
+    await _supabaseService.salvarSessaoFoco(sessao);
 
     setState(() {
       _emAndamento = false;
@@ -352,13 +367,53 @@ class _FocoScreenState extends State<FocoScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.red[50],
+                color: Colors.green[50],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red[200]!)
+                border: Border.all(color: Colors.green[200]!)
               ),
               child: Row(
                 children: [
-                  Icon(Icons.block, color: Colors.red[600]),
+                  Icon(Icons.star, color: Colors.green[600]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Apps de Foco:",
+                          style: GoogleFonts.raleway(fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                        Text(
+                          _appsProdutivos.isEmpty
+                              ? "Nenhum app selecionado"
+                              : "${_appsProdutivos.length} apps selecionados",
+                          style: TextStyle(color: Colors.green[700], fontSize: 13),
+                        )
+                      ],
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => _abrirSeletorApps(true),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.green[700],
+                      side: BorderSide(color: Colors.green[300]!)
+                    ),
+                    child: const Text('Configurar'),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!)
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.block, color: Colors.grey[700]),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -372,16 +427,16 @@ class _FocoScreenState extends State<FocoScreen> {
                           _appsBloqueados.isEmpty
                               ? "Nenhum app selecionado"
                               : "${_appsBloqueados.length} apps selecionados",
-                          style: TextStyle(color: Colors.red[700], fontSize: 13),
+                          style: TextStyle(color: Colors.grey[700], fontSize: 13),
                         )
                       ],
                     ),
                   ),
                   OutlinedButton(
-                    onPressed: _abrirSeletorApps,
+                    onPressed: () => _abrirSeletorApps(false),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red[700],
-                      side: BorderSide(color: Colors.red[300]!)
+                      foregroundColor: Colors.grey[700],
+                      side: BorderSide(color: Colors.grey[400]!)
                     ),
                     child: const Text('Configurar'),
                   )
@@ -473,7 +528,7 @@ class _FocoScreenState extends State<FocoScreen> {
                       fontWeight: selecionado ? FontWeight.bold : FontWeight.normal,
                     ),
                   );
-                }).toList(),
+                }),
                 ActionChip(
                   label: const Text('Personalizar'),
                   avatar: const Icon(Icons.edit, size: 16),

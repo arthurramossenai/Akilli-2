@@ -130,7 +130,7 @@ class BlockOverlayActivity : Activity() {
             setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14))
             setOnClickListener {
                 // Pausa o bloqueio por 2 minutos enviando pro AppBlockerService
-                AppBlockerService.startSnoozeTimer(this@BlockOverlayActivity, blockedPackage)
+                AppBlockerForegroundService.startSnooze(blockedPackage)
                 finish()
             }
         }

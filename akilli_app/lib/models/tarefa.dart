@@ -10,6 +10,7 @@ class Tarefa {
   final String? appProdutividade; // Package_name do app de foco ligado à tarefa (Opcional)
   final bool modoFoco; // Indica se a tarefa usará bloqueio de foco
   final String? appsBloqueados; // JSON com lista de package_names bloqueados
+  final int? alertaMinutos; // Minutos antes do inicio para notificar (5, 10, 15...)
 
   Tarefa({
     this.idTarefa,
@@ -23,6 +24,7 @@ class Tarefa {
     this.appProdutividade,
     this.modoFoco = false,
     this.appsBloqueados,
+    this.alertaMinutos,
   });
 
   factory Tarefa.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class Tarefa {
       appProdutividade: json['app_produtividade'],
       modoFoco: json['modo_foco'] ?? false,
       appsBloqueados: json['apps_bloqueados'],
+      alertaMinutos: json['alerta_minutos'],
     );
   }
 
@@ -53,5 +56,6 @@ class Tarefa {
         'app_produtividade': appProdutividade,
         'modo_foco': modoFoco,
         if (appsBloqueados != null) 'apps_bloqueados': appsBloqueados,
+        if (alertaMinutos != null) 'alerta_minutos': alertaMinutos,
       };
 }

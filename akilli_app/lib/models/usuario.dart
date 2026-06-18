@@ -7,6 +7,7 @@ class Usuario {
   final String? planoAssinatura;
   final int? pontos;
   final String? cadastradoEm;
+  final String? avatarUrl;
 
   Usuario({
     this.idUsuario,
@@ -17,6 +18,7 @@ class Usuario {
     this.planoAssinatura,
     this.pontos,
     this.cadastradoEm,
+    this.avatarUrl,
   });
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class Usuario {
       planoAssinatura: json['plano_assinatura'],
       pontos: json['pontos'],
       cadastradoEm: json['cadastrado_em']?.toString(),
+      avatarUrl: json['avatar_url'],
     );
   }
 
@@ -40,5 +43,6 @@ class Usuario {
         'telefone': telefone,
         'plano_assinatura': planoAssinatura,
         'pontos': pontos,
+        'avatar_url': avatarUrl,
       };
 }
